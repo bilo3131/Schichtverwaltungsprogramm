@@ -1,0 +1,35 @@
+[Unit]
+Description=Gunicorn daemon for Schichtplan Django Application
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/schichtplan/backend
+Environment="PATH=/var/www/schichtplan/backend/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=schichtplan.settings_prod"
+
+# Gunicorn mit 4 Worker-Prozessen starten
+# Passe --workers an die Anzahl der CPU-Cores an (Empfehlung: 2-4 x CPU Cores)
+ExecStart=/var/www/schichtplan/backend/venv/bin/gunicorn \
+    --workers 4 \
+    --bind unix:/var/www/schichtplan/backend/gunicorn.sock \
+    --timeout 120 \
+    --access-logfile /var/www/schichtplan/backend/logs/gunicorn-access.log \
+    --error-logfile /var/www/schichtplan/backend/logs/gunicorn-error.log \
+    --log-level info \
+    schichtplan.wsgi:application
+
+# Automatischer Neustart bei Fehler
+Restart=on-failure
+RestartSec=5s
+
+# Security Hardening (optional aber empfohlen)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/schichtplan/backend/logs
+ReadWritePaths=/var/www/schichtplan/backend/mediafiles
+
+[Install]
+WantedBy=multi-user.target
