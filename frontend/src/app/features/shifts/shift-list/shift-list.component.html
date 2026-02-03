@@ -1,0 +1,282 @@
+<div class="shift-list">
+      <div class="header">
+        <h1>Schichtplan</h1>
+        <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
+          <mat-icon>info</mat-icon>
+        </button>
+      </div>
+
+      <mat-card class="filter-card">
+        <mat-card-content>
+          <div class="filters">
+            <div class="week-selector">
+              <button mat-icon-button (click)="previousWeek()">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <div class="week-display">
+                <h3>{{ getWeekDisplay() }}</h3>
+                <div class="week-status" *ngIf="weekStatus">
+                  <mat-chip [color]="weekStatus.isPublished ? 'primary' : ''" class="status-chip">
+                    <mat-icon>{{ weekStatus.isPublished ? 'check_circle' : 'edit' }}</mat-icon>
+                    {{ weekStatus.isPublished ? 'Veröffentlicht' : 'Entwurf' }}
+                  </mat-chip>
+                  <span class="published-info" *ngIf="weekStatus.isPublished && weekStatus.publishedAt">
+                    am {{ weekStatus.publishedAt | date:'dd.MM.yyyy HH:mm' }} Uhr
+                  </span>
+                </div>
+              </div>
+              <button mat-icon-button (click)="nextWeek()">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+              <button mat-raised-button color="primary" (click)="goToCurrentWeek()" class="today-button">
+                <mat-icon>today</mat-icon>
+                Heute
+              </button>
+            </div>
+
+            <button mat-raised-button color="accent" (click)="publishWeek()" class="publish-button" *ngIf="!isEmployee">
+              <mat-icon>send</mat-icon>
+              Schichtplan veröffentlichen
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+      <!-- For non-employees: wrap in cdkDropListGroup for drag & drop -->
+      <ng-container *ngIf="!isEmployee">
+        <div cdkDropListGroup>
+          <mat-card *ngIf="!loading" class="employees-card">
+            <mat-card-content>
+              <h3>Mitarbeiter</h3>
+              <div class="employees-list" 
+                   cdkDropList 
+                   id="employee-list"
+                   [cdkDropListData]="employees"
+                   cdkDropListSortingDisabled>
+                <button mat-raised-button
+                        class="employee-button"
+                        [class.has-conflict]="isDraggedEmployeeInConflict(employee.id)"
+                        [class.overloaded]="isEmployeeOverloaded(employee)"
+                        [class.min-hours-reached]="!hasEmployeeAbsence(employee) && !isEmployeeOverloaded(employee) && hasEmployeeReachedMinHours(employee)"
+                        [class.has-absence]="hasEmployeeAbsence(employee)"
+                        [matTooltip]="hasEmployeeAbsence(employee) ? getEmployeeAbsenceTooltip(employee) : ''"
+                        *ngFor="let employee of employees" 
+                        cdkDrag
+                        [cdkDragData]="employee"
+                        (cdkDragStarted)="onDragStarted(employee)"
+                        (cdkDragEnded)="onDragEnded()">
+                  <mat-icon class="drag-handle">drag_indicator</mat-icon>
+                  <span>{{ formatEmployeeName(employee) }}</span>
+                  <mat-icon *ngIf="isDraggedEmployeeInConflict(employee.id)" class="warning-icon">warning</mat-icon>
+                  <mat-icon *ngIf="isEmployeeOverloaded(employee)" class="overload-icon" matTooltip="Überlastet: {{ getEmployeeWeeklyHours(employee.id) }}h / {{ employee.max_hours_per_week }}h">schedule</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card *ngIf="!loading" class="calendar-card">
+          <mat-card-content (mousemove)="onCalendarMouseMove($event)">
+            <div class="calendar-grid">
+              <!-- Header Row -->
+              <div class="grid-header">
+                <div class="employee-header">Schicht</div>
+                <div class="day-header" *ngFor="let day of weekDays">
+                  <div class="day-name">{{ day.name }}</div>
+                  <div class="day-date">{{ day.date }}</div>
+                </div>
+              </div>
+
+              <!-- Shift Type Rows -->
+              <div class="grid-row" *ngFor="let shiftType of shiftTypes">
+                <div class="employee-cell" [style.border-left-color]="shiftType.color">
+                  <div>
+                    <strong>{{ shiftType.name }} (Min: {{ shiftType.min_employees || 'N/A' }})</strong>
+                    <div class="shift-time-label">{{ formatTime(shiftType.start_time) }} - {{ formatTime(shiftType.end_time) }}</div>
+                    <div class="qualifications-info">
+                      <mat-icon class="info-icon" 
+                                [matTooltip]="'Erforderliche Qualifikationen: ' + getRequiredQualificationsText(shiftType)"
+                                matTooltipClass="qualification-tooltip"
+                                matTooltipPosition="right">info</mat-icon>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- For non-employees: with drag & drop functionality -->
+                  <div class="shift-cell" 
+                       *ngFor="let day of weekDays"
+                       [class.conflict-zone]="conflictCells.has(shiftType.id + '_' + day.dateStr)"
+                       [class.understaffed]="!conflictCells.has(shiftType.id + '_' + day.dateStr) && understaffedCells.has(shiftType.id + '_' + day.dateStr)"
+                       [class.missing-qualifications]="hasMissingQualifications(shiftType.id, day.dateStr)"
+                       cdkDropList
+                       [cdkDropListData]="{shiftTypeId: shiftType.id, date: day.dateStr}"
+                       (cdkDropListDropped)="onEmployeeDrop($event)"
+                       (cdkDropListEntered)="onDropListEntered($event)"
+                       (mouseenter)="onCellHover(shiftType.id, day.dateStr)"
+                       (mouseleave)="onCellLeave()">
+                    <div class="employee-card" 
+                         [class.has-conflict]="hasPermanentConflict(shift.id)"
+                         [class.own-shift]="isOwnShift(shift.employee)"
+                         *ngFor="let shift of getShiftsForTypeAndDay(shiftType.id, day.dateStr)"
+                         cdkDrag
+                         [cdkDragData]="shift"
+                         (cdkDragStarted)="onShiftDragStarted(shift)"
+                         (cdkDragEnded)="onDragEnded()"
+                         (click)="openShiftDialog(shift)"
+                         [matTooltip]="getConflictTooltip(shift)">
+                      <div class="employee-name">
+                        <mat-icon *ngIf="hasPermanentConflict(shift.id)" class="warning-icon">warning</mat-icon>
+                        {{ getEmployeeName(shift.employee) }}
+                      </div>
+                      <div class="employee-duration">{{ shift.duration_hours | number:'1.1-1' }}h</div>
+                      <div class="shift-actions">
+                        <button mat-icon-button (click)="deleteShift(shift); $event.stopPropagation()" class="delete-btn">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="empty-cell" *ngIf="getShiftsForTypeAndDay(shiftType.id, day.dateStr).length === 0">
+                      <button mat-icon-button (click)="openQuickAddDialogForShiftType(shiftType.id, day.dateStr)" class="add-shift-btn">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
+                    <div class="missing-qualifications-warning" *ngIf="hasMissingQualifications(shiftType.id, day.dateStr)">
+                      <div class="warning-header">
+                        <mat-icon class="warning-icon">warning</mat-icon>
+                        <span class="warning-text">Fehlende Qualifikationen: {{ getMissingQualificationsText(shiftType.id, day.dateStr) }}</span>
+                      </div>
+                      <div class="suggested-employees" *ngIf="getSuggestedEmployees(shiftType.id, day.dateStr).length > 0">
+                        <span class="suggestion-label">Vorschläge:</span>
+                        <div class="employee-suggestions">
+                          <button mat-stroked-button 
+                                  *ngFor="let emp of getSuggestedEmployees(shiftType.id, day.dateStr).slice(0, 3)"
+                                  (click)="addSuggestedEmployee(emp, shiftType.id, day.dateStr)"
+                                  class="suggested-employee-btn"
+                                  [matTooltip]="emp.full_name + ' - Qualifikationen: ' + getEmployeeQualificationsText(emp)">
+                            <mat-icon>person_add</mat-icon>
+                            {{ formatEmployeeName(emp) }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="empty-state" *ngIf="shiftTypes.length === 0">
+              Keine Schichttypen gefunden. Bitte erstellen Sie zuerst Schichttypen.
+            </div>
+          </mat-card-content>
+          </mat-card>
+        </div>
+      </ng-container>
+
+      <!-- For employees: read-only calendar without cdkDropListGroup -->
+      <mat-card *ngIf="!loading && isEmployee" class="calendar-card">
+      <mat-card-content>
+        <div class="calendar-grid">
+          <!-- Header Row -->
+          <div class="grid-header">
+            <div class="employee-header">Schicht</div>
+            <div class="day-header" *ngFor="let day of weekDays">
+              <div class="day-name">{{ day.name }}</div>
+              <div class="day-date">{{ day.date }}</div>
+            </div>
+          </div>
+
+          <!-- Shift Type Rows -->
+          <div class="grid-row" *ngFor="let shiftType of shiftTypes">
+            <div class="employee-cell" [style.border-left-color]="shiftType.color">
+              <div>
+                <strong>{{ shiftType.name }} (Min: {{ shiftType.min_employees || 'N/A' }})</strong>
+                <div class="shift-time-label">{{ formatTime(shiftType.start_time) }} - {{ formatTime(shiftType.end_time) }}</div>
+                <div class="qualifications-info">
+                  <mat-icon class="info-icon" [matTooltip]="'Erforderliche Qualifikationen: ' + getRequiredQualificationsText(shiftType)">info</mat-icon>
+                </div>
+              </div>
+            </div>
+            
+            <!-- For employees: read-only view without drag & drop -->
+              <div class="shift-cell" 
+                   *ngFor="let day of weekDays"
+                   [class.conflict-zone]="conflictCells.has(shiftType.id + '_' + day.dateStr)"
+                   [class.understaffed]="!conflictCells.has(shiftType.id + '_' + day.dateStr) && understaffedCells.has(shiftType.id + '_' + day.dateStr)"
+                   [class.missing-qualifications]="hasMissingQualifications(shiftType.id, day.dateStr)">
+                <div class="employee-card" 
+                     [class.has-conflict]="hasPermanentConflict(shift.id)"
+                     [class.own-shift]="isOwnShift(shift.employee)"
+                     *ngFor="let shift of getShiftsForTypeAndDay(shiftType.id, day.dateStr)"
+                     [matTooltip]="getConflictTooltip(shift)">
+                  <div class="employee-name">
+                    <mat-icon *ngIf="hasPermanentConflict(shift.id)" class="warning-icon">warning</mat-icon>
+                    {{ getEmployeeName(shift.employee) }}
+                  </div>
+                  <div class="employee-duration">{{ shift.duration_hours | number:'1.1-1' }}h</div>
+                </div>
+              </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="shiftTypes.length === 0">
+          Keine Schichttypen gefunden. Bitte erstellen Sie zuerst Schichttypen.
+        </div>
+      </mat-card-content>
+      </mat-card>
+
+      <button mat-fab 
+              color="primary" 
+              class="pdf-fab"
+              (click)="exportToPDF()"
+              matTooltip="Schichtplan als PDF exportieren">
+        <mat-icon>picture_as_pdf</mat-icon>
+      </button>
+
+      <button mat-fab 
+              color="warn" 
+              class="delete-all-fab"
+              (click)="deleteAllShifts()"
+              *ngIf="shifts.length > 0 && !isEmployee"
+              matTooltip="Alle Schichten dieser Woche löschen">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+
+      <!-- Info Box Overlay -->
+      <div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+      <mat-card class="info-box" *ngIf="showInfoBox">
+        <mat-card-content>
+          <div class="info-header">
+            <div class="info-title">
+              <mat-icon color="primary">info</mat-icon>
+              <h3>Informationen zur Schichtplan-Seite</h3>
+            </div>
+            <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="info-content">
+            <div class="info-section">
+              <h4><mat-icon>calendar_today</mat-icon> Wochenansicht</h4>
+              <p>Der Schichtplan wird in Wochenansicht angezeigt. Navigieren Sie mit den Pfeiltasten zwischen den Wochen oder springen Sie mit dem "Heute"-Button zur aktuellen Woche.</p>
+            </div>
+            <div class="info-section" *ngIf="!isEmployee">
+              <h4><mat-icon>drag_indicator</mat-icon> Drag & Drop</h4>
+              <p>Ziehen Sie Mitarbeiter aus der Liste auf die gewünschten Schicht-Zellen, um Schichten zuzuweisen. Konflikte werden automatisch erkannt und rot markiert.</p>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>warning</mat-icon> Besonderheiten</h4>
+              <ul>
+                <li><strong>Konflikterkennung:</strong> Überschneidungen mit anderen Schichten oder Abwesenheiten werden automatisch erkannt</li>
+                <li><strong>Unterbesetzung:</strong> Gelbe Markierungen zeigen an, wenn die Mindestanzahl an Mitarbeitern nicht erreicht wird</li>
+                <li><strong>Qualifikationen:</strong> Das System prüft, ob Mitarbeiter die erforderlichen Qualifikationen haben</li>
+                <li><strong>Veröffentlichung:</strong> Schichtpläne können als Entwurf gespeichert oder veröffentlicht werden</li>
+              </ul>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>picture_as_pdf</mat-icon> Export</h4>
+              <p>Exportieren Sie den Schichtplan als PDF über den Button unten rechts.</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>

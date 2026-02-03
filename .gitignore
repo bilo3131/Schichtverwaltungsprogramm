@@ -1,0 +1,55 @@
+# Python / Django
+backend/env/
+backend/venv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/*.so
+backend/.Python
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/media/
+backend/mediafiles/
+backend/staticfiles/
+backend/logs/
+backend/*.log
+backend/local_settings.py
+backend/.env
+backend/.env.*
+
+# Angular / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.vscode/
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Backups
+*.sql
+*.sql.gz
+*_backup.*
+
+# Certificates
+*.pem
+*.key
+*.crt

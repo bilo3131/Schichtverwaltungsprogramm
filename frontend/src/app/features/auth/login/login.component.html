@@ -1,0 +1,55 @@
+<div class="login-container">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <mat-card-title>Schichtplan - Login</mat-card-title>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <app-loading-spinner *ngIf="loading" [message]="'Anmeldung läuft...'"></app-loading-spinner>
+      
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" *ngIf="!loading">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Benutzername</mat-label>
+          <input matInput formControlName="username" autocomplete="username">
+          <mat-icon matPrefix>person</mat-icon>
+          <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
+            Benutzername ist erforderlich
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Passwort</mat-label>
+          <input 
+            matInput 
+            [type]="hidePassword ? 'password' : 'text'"
+            formControlName="password"
+            autocomplete="current-password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            type="button"
+            (click)="hidePassword = !hidePassword">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
+            Passwort ist erforderlich
+          </mat-error>
+        </mat-form-field>
+
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          class="full-width"
+          [disabled]="loginForm.invalid || loading">
+          Anmelden
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+  
+  <div class="copyright-footer">
+    <p>&copy; {{ currentYear }} Bilal Alac. Alle Rechte vorbehalten.</p>
+  </div>
+</div>

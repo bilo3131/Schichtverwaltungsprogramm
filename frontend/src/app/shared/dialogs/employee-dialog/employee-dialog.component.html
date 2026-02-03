@@ -1,0 +1,195 @@
+<h2 mat-dialog-title>{{ data.employee ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter' }}</h2>
+<mat-dialog-content>
+  <div class="login-info-banner" *ngIf="!data.employee">
+    <mat-icon>info</mat-icon>
+    <div>
+      <strong>Automatische Login-Erstellung:</strong>
+      <p>
+        Benutzername: <code>vorname.nachname</code> (z.B. max.mustermann)<br>
+        Standard-Passwort: <code>Abc123</code><br>
+        <small>Mitarbeiter können das Passwort nach dem Login ändern.</small>
+      </p>
+    </div>
+  </div>
+  
+  <form [formGroup]="employeeForm">
+    <ng-container *ngIf="canEditEmployee(); else readOnlyView">
+      <ng-container *ngIf="canEditAllFields(); else limitedEdit">
+        <div class="name-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Vorname</mat-label>
+            <input matInput formControlName="first_name" required>
+            <mat-error *ngIf="employeeForm.get('first_name')?.hasError('required')">
+              Vorname ist erforderlich
+            </mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nachname</mat-label>
+            <input matInput formControlName="last_name" required>
+            <mat-error *ngIf="employeeForm.get('last_name')?.hasError('required')">
+              Nachname ist erforderlich
+            </mat-error>
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>E-Mail</mat-label>
+          <input matInput type="email" formControlName="email" required>
+          <mat-error *ngIf="employeeForm.get('email')?.hasError('required')">
+            E-Mail ist erforderlich
+          </mat-error>
+          <mat-error *ngIf="employeeForm.get('email')?.hasError('email')">
+            Ungültige E-Mail-Adresse
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Abteilung</mat-label>
+          <mat-select formControlName="department">
+            <mat-option [value]="null">Keine Abteilung</mat-option>
+            <mat-option *ngFor="let dept of departments" [value]="dept.id">
+              {{ dept.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Beschäftigungsart</mat-label>
+          <mat-select formControlName="employment_type" required>
+            <mat-option value="fulltime">Vollzeit</mat-option>
+            <mat-option value="parttime">Teilzeit</mat-option>
+            <mat-option value="minijob">Minijob</mat-option>
+            <mat-option value="werkstudent">Werkstudent</mat-option>
+            <mat-option value="apprentice">Ausbildung</mat-option>
+          </mat-select>
+          <mat-error *ngIf="employeeForm.get('employment_type')?.hasError('required')">
+            Beschäftigungsart ist erforderlich
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Rolle</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="employee">Mitarbeiter</mat-option>
+            <mat-option value="group_leader">Gruppenleiter</mat-option>
+            <mat-option value="team_leader">Teamleiter</mat-option>
+            <mat-option value="department_manager">Abteilungsleiter</mat-option>
+            <mat-option value="hr">Personalwesen</mat-option>
+            <mat-option value="admin">Administrator</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Qualifikationen</mat-label>
+          <mat-select formControlName="qualifications" multiple>
+            <mat-option *ngFor="let qual of filteredQualifications" [value]="qual.id">
+              {{ qual.name }}
+            </mat-option>
+          </mat-select>
+          <mat-hint *ngIf="filteredQualifications.length === 0">Keine Qualifikationen für diese Abteilung verfügbar</mat-hint>
+        </mat-form-field>
+        <div class="hours-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Min. Wochenstunden</mat-label>
+            <input matInput type="number" formControlName="min_hours_per_week" min="0" [readonly]="!canEditWorkingHours()">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Max. Wochenstunden</mat-label>
+            <input matInput type="number" formControlName="max_hours_per_week" min="0" max="60" [readonly]="!canEditWorkingHours()">
+          </mat-form-field>
+        </div>
+        <div class="hours-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Überstunden (Stunden)</mat-label>
+            <input matInput type="number" formControlName="overtime_hours_h" [readonly]="!canEditWorkingHours()">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Überstunden (Minuten)</mat-label>
+            <input matInput type="number" formControlName="overtime_hours_min" min="0" max="59" [readonly]="!canEditWorkingHours()">
+            <mat-hint>Aktueller Überstundensaldo</mat-hint>
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Einstellungsdatum</mat-label>
+          <input matInput type="date" formControlName="hire_date">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Notizen</mat-label>
+          <textarea matInput formControlName="notes" rows="3"></textarea>
+        </mat-form-field>
+      </ng-container>
+      <ng-template #limitedEdit>
+        <!-- Restliche Felder als readonly anzeigen -->
+        <div class="name-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Vorname</mat-label>
+            <input matInput [value]="employeeForm.get('first_name')?.value" readonly>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nachname</mat-label>
+            <input matInput [value]="employeeForm.get('last_name')?.value" readonly>
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>E-Mail</mat-label>
+          <input matInput [value]="employeeForm.get('email')?.value" readonly>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Abteilung</mat-label>
+          <input matInput [value]="getDepartmentName()" readonly>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Beschäftigungsart</mat-label>
+          <input matInput [value]="getEmploymentTypeName()" readonly>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Rolle</mat-label>
+          <input matInput [value]="getRoleName()" readonly>
+        </mat-form-field>
+        <!-- Qualifikationen: editierbar nur wenn canEditQualifications(), sonst readonly -->
+        <ng-container *ngIf="canEditQualifications(); else readonlyQualifications">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Qualifikationen</mat-label>
+            <mat-select formControlName="qualifications" multiple>
+              <mat-option *ngFor="let qual of qualifications" [value]="qual.id">
+                {{ qual.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+        <ng-template #readonlyQualifications>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Qualifikationen</mat-label>
+            <input matInput [value]="getQualificationNames()" readonly>
+          </mat-form-field>
+        </ng-template>
+        <div class="hours-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Min. Wochenstunden</mat-label>
+            <input matInput [value]="employeeForm.get('min_hours_per_week')?.value" readonly>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Max. Wochenstunden</mat-label>
+            <input matInput [value]="employeeForm.get('max_hours_per_week')?.value" readonly>
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Einstellungsdatum</mat-label>
+          <input matInput [value]="employeeForm.get('hire_date')?.value | date:'dd.MM.yyyy'" readonly>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Notizen</mat-label>
+          <textarea matInput formControlName="notes" rows="3"></textarea>
+        </mat-form-field>
+      </ng-template>
+    </ng-container>
+    <ng-template #readOnlyView>
+      <div class="readonly-message">
+        <p>Sie dürfen die Daten dieses Mitarbeiters nicht bearbeiten.</p>
+      </div>
+    </ng-template>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Abbrechen</button>
+  <button mat-raised-button color="primary" 
+          [disabled]="employeeForm.invalid || !canEditEmployee()"
+          (click)="onSave()">
+    Speichern
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,307 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatBadgeModule } from '@angular/material/badge';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { DepartmentService } from '../../../core/services/department.service';
+import { DashboardFilterService } from '../../../core/services/dashboard-filter.service';
+import { PwaService } from '../../../core/services/pwa.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
+import { InactivityService } from '../../../core/services/inactivity.service';
+import type { User, Department, Notification } from '../../../core/models';
+
+interface MenuItem {
+  label: string;
+  icon: string;
+  route?: string;
+  roles: string[];
+  divider?: boolean;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    MatToolbarModule,
+    MatSidenavModule,
+    MatListModule,
+    MatIconModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatTooltipModule,
+    MatSelectModule,
+    MatBadgeModule,
+    FormsModule
+  ],
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.scss']
+})
+export class DashboardComponent implements OnInit {
+  currentUser: User | null = null;
+  sidenavOpened = true;
+  isDarkMode = false;
+  departments: Department[] = [];
+  notifications: Notification[] = [];
+  unreadCount = 0;
+  currentTier: string = '';
+  currentYear = new Date().getFullYear();
+  
+  get selectedDepartmentId(): number | 'all' {
+    return this.dashboardFilterService.selectedDepartmentId$.value;
+  }
+  
+  set selectedDepartmentId(value: number | 'all') {
+    this.dashboardFilterService.setDepartmentFilter(value);
+  }
+
+  menuItems: MenuItem[] = [
+    {
+      label: 'Dashboard',
+      icon: 'dashboard',
+      route: '/dashboard',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+    {
+      label: 'Kalender',
+      icon: 'calendar_month',
+      route: '/calendar',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+    {
+      label: 'Schichtplan',
+      icon: 'calendar_today',
+      route: '/shifts',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+    {
+      label: 'Schichten',
+      icon: 'category',
+      route: '/shift-types',
+      roles: ['admin', 'hr', 'department_manager'],
+      divider: true
+    },
+    {
+      label: 'Personal',
+      icon: 'people',
+      route: '/employees',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']
+    },
+    {
+      label: 'Qualifikationen',
+      icon: 'verified',
+      route: '/qualifications',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader'],
+      divider: true
+    },
+    {
+      label: 'Urlaub',
+      icon: 'beach_access',
+      route: '/vacations',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+    {
+      label: 'Abwesenheiten',
+      icon: 'sick',
+      route: '/absences',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader'],
+      divider: true
+    },
+    {
+      label: 'Abteilungen',
+      icon: 'corporate_fare',
+      route: '/departments',
+      roles: ['admin', 'hr']
+    },
+    {
+      label: 'Datenschutz',
+      icon: 'policy',
+      route: '/privacy-policy',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+    {
+      label: 'Impressum',
+      icon: 'gavel',
+      route: '/imprint',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
+    },
+  ];
+
+  constructor(
+    public authService: AuthService,
+    private themeService: ThemeService,
+    private router: Router,
+    private departmentService: DepartmentService,
+    private dashboardFilterService: DashboardFilterService,
+    public pwaService: PwaService,
+    private notificationService: NotificationService,
+    private subscriptionService: SubscriptionService,
+    private inactivityService: InactivityService
+  ) {}
+
+  ngOnInit(): void {
+    this.pwaService.checkForInstallPrompt();
+    
+    // Starte Inaktivitäts-Überwachung
+    this.inactivityService.startMonitoring();
+    
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      
+      // Lade Abteilungen für Admin/HR/Department Manager
+      if (user && ['admin', 'hr', 'department_manager'].includes(user.role)) {
+        this.loadDepartments();
+      }
+      
+      // Lade Benachrichtigungen
+      if (user) {
+        this.loadNotifications();
+        this.requestNotificationPermission();
+      }
+      
+      // Lade Subscription-Info für Admins
+      if (user && user.role === 'admin') {
+        this.loadSubscriptionInfo();
+      }
+    });
+    
+    this.themeService.darkMode$.subscribe(isDark => {
+      this.isDarkMode = isDark;
+    });
+  }
+
+  loadSubscriptionInfo(): void {
+    this.subscriptionService.getLimits().subscribe(limits => {
+      if (limits) {
+        this.currentTier = limits.tier_display;
+      }
+    });
+  }
+
+  loadDepartments(): void {
+    this.departmentService.getDepartments().subscribe({
+      next: (data) => {
+        this.departments = data.results || data;
+      }
+    });
+  }
+
+  loadNotifications(): void {
+    this.notificationService.getNotifications().subscribe({
+      next: (data) => {
+        this.notifications = (data.results || data).slice(0, 10); // Zeige nur letzte 10
+      }
+    });
+    
+    this.notificationService.getUnreadCount().subscribe({
+      next: (data) => {
+        this.unreadCount = data.unread_count;
+      }
+    });
+  }
+
+  requestNotificationPermission(): void {
+    this.notificationService.requestPushPermission();
+  }
+
+  markAsRead(notification: Notification): void {
+    if (!notification.is_read) {
+      this.notificationService.markAsRead(notification.id).subscribe({
+        next: () => {
+          notification.is_read = true;
+          this.unreadCount = Math.max(0, this.unreadCount - 1);
+        }
+      });
+    }
+  }
+
+  markAllAsRead(): void {
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => {
+        this.notifications.forEach(n => n.is_read = true);
+        this.unreadCount = 0;
+      }
+    });
+  }
+
+  deleteNotification(id: number, event: Event): void {
+    event.stopPropagation();
+    this.notificationService.deleteNotification(id).subscribe({
+      next: () => {
+        const notification = this.notifications.find(n => n.id === id);
+        if (notification && !notification.is_read) {
+          this.unreadCount = Math.max(0, this.unreadCount - 1);
+        }
+        this.notifications = this.notifications.filter(n => n.id !== id);
+      }
+    });
+  }
+
+  getNotificationIcon(type: string): string {
+    const icons: Record<string, string> = {
+      'shift_created': 'add_circle',
+      'shift_updated': 'update',
+      'shift_deleted': 'remove_circle',
+      'vacation_approved': 'check_circle',
+      'vacation_rejected': 'cancel',
+      'vacation_request': 'inbox'
+    };
+    return icons[type] || 'notifications';
+  }
+
+  getNotificationColor(type: string): string {
+    const colors: Record<string, string> = {
+      'shift_created': 'primary',
+      'shift_updated': 'accent',
+      'shift_deleted': 'warn',
+      'vacation_approved': 'primary',
+      'vacation_rejected': 'warn',
+      'vacation_request': 'accent'
+    };
+    return colors[type] || '';
+  }
+
+  hasAccess(roles: string[]): boolean {
+    return this.currentUser ? roles.includes(this.currentUser.role) : false;
+  }
+
+  getRoleLabel(role: string | undefined): string {
+    if (!role) return 'Mitarbeiter';
+    const labels: Record<string, string> = {
+      'admin': 'Administrator',
+      'hr': 'Personalwesen',
+      'department_manager': 'Abteilungsleiter',
+      'team_leader': 'Teamleiter',
+      'group_leader': 'Gruppenleiter',
+      'employee': 'Mitarbeiter'
+    };
+    return labels[role] || 'Mitarbeiter';
+  }
+
+  logout(): void {
+    this.inactivityService.stopMonitoring();
+    this.authService.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
+      }
+    });
+  }
+
+  toggleDarkMode(): void {
+    this.themeService.toggleDarkMode();
+  }
+}

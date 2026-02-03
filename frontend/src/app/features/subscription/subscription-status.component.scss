@@ -1,0 +1,276 @@
+.subscription-status {
+  mat-card {
+    max-width: 800px;
+    margin: 0 auto;
+
+    mat-card-header {
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+
+        .tier-info {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+
+          mat-icon {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+            color: #ffa726;
+          }
+
+          h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #333;
+          }
+        }
+      }
+    }
+
+    mat-card-content {
+      padding-top: 1.5rem;
+
+      .limit-section, .pricing-section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f5f5f5;
+        border-radius: 8px;
+
+        .limit-header, .pricing-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+
+          mat-icon {
+            color: #1976d2;
+          }
+
+          h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #333;
+          }
+        }
+
+        .limit-content {
+          .limit-stats {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+
+            .current {
+              font-weight: 600;
+              color: #1976d2;
+            }
+
+            .separator {
+              color: #999;
+            }
+
+            .max {
+              color: #666;
+            }
+          }
+
+          mat-progress-bar {
+            margin-bottom: 0.75rem;
+            height: 8px;
+            border-radius: 4px;
+          }
+
+          .limit-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+
+            .status-icon {
+              font-size: 20px;
+              width: 20px;
+              height: 20px;
+
+              &.success {
+                color: #4caf50;
+              }
+
+              &.error {
+                color: #f44336;
+              }
+            }
+          }
+        }
+      }
+
+      .pricing-section {
+        .pricing-content {
+          .price-breakdown {
+            .price-item {
+              display: flex;
+              justify-content: space-between;
+              padding: 0.5rem 0;
+              border-bottom: 1px solid #e0e0e0;
+
+              .label {
+                color: #666;
+              }
+
+              .value {
+                font-weight: 500;
+                color: #333;
+              }
+            }
+          }
+
+          .total-price {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0 0;
+            margin-top: 0.5rem;
+            border-top: 2px solid #1976d2;
+            font-size: 1.2rem;
+
+            .label {
+              font-weight: 600;
+              color: #333;
+            }
+
+            .value {
+              font-weight: 700;
+              color: #1976d2;
+            }
+          }
+        }
+      }
+
+      .status-section {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        background: #e3f2fd;
+        border-radius: 4px;
+        color: #1976d2;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+
+    mat-card-actions {
+      padding: 1rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}
+
+:host-context(.dark-theme) .subscription-status {
+  mat-card {
+    mat-card-header {
+      .header-content {
+        .tier-info {
+          h2 {
+            color: #ffffff;
+          }
+          
+          mat-icon {
+            color: #ffb74d;
+          }
+        }
+      }
+    }
+    
+    mat-card-content {
+      .limit-section, .pricing-section {
+        background: #303030;
+        
+        .limit-header, .pricing-header {
+          h3 {
+            color: #ffffff;
+          }
+          
+          mat-icon {
+            color: #64b5f6;
+          }
+        }
+        
+        .limit-content {
+          .limit-stats {
+            .current {
+              color: #64b5f6;
+            }
+            
+            .separator {
+              color: rgba(255, 255, 255, 0.5);
+            }
+            
+            .max {
+              color: rgba(255, 255, 255, 0.7);
+            }
+          }
+          
+          .limit-status {
+            color: rgba(255, 255, 255, 0.7);
+            
+            .status-icon {
+              &.success {
+                color: #66bb6a;
+              }
+              
+              &.error {
+                color: #ef5350;
+              }
+            }
+          }
+        }
+      }
+      
+      .pricing-section {
+        .pricing-content {
+          .price-breakdown {
+            .price-item {
+              border-bottom-color: rgba(255, 255, 255, 0.12);
+              
+              .label {
+                color: rgba(255, 255, 255, 0.7);
+              }
+              
+              .value {
+                color: #ffffff;
+              }
+            }
+          }
+          
+          .total-price {
+            border-top-color: #64b5f6;
+            
+            .label {
+              color: #ffffff;
+            }
+            
+            .value {
+              color: #64b5f6;
+            }
+          }
+        }
+      }
+      
+      .status-section {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64b5f6;
+      }
+    }
+  }
+}

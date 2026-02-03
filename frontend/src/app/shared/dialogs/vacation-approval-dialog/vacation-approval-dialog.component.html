@@ -1,0 +1,56 @@
+<div class="vacation-approval-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon [color]="data.action === 'approve' ? 'primary' : 'warn'">
+      {{ data.action === 'approve' ? 'check_circle' : 'cancel' }}
+    </mat-icon>
+    {{ data.action === 'approve' ? 'Urlaubsantrag genehmigen' : 'Urlaubsantrag ablehnen' }}
+  </h2>
+  <mat-dialog-content>
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <mat-icon>person</mat-icon>
+            <div>
+              <label>Mitarbeiter</label>
+              <span>{{ data.request.employee_name }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <mat-icon>date_range</mat-icon>
+            <div>
+              <label>Zeitraum</label>
+              <span>{{ data.request.start_date | date:'dd.MM.yyyy' }} - {{ data.request.end_date | date:'dd.MM.yyyy' }}</span>
+            </div>
+          </div>
+          <div class="info-item full-width" *ngIf="data.request.notes">
+            <mat-icon>notes</mat-icon>
+            <div>
+              <label>Notizen</label>
+              <span>{{ data.request.notes }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <p class="confirmation-text">
+      <mat-icon>{{ data.action === 'approve' ? 'help_outline' : 'warning' }}</mat-icon>
+      {{ data.action === 'approve' 
+         ? 'Möchten Sie diesen Urlaubsantrag wirklich genehmigen?' 
+         : 'Möchten Sie diesen Urlaubsantrag wirklich ablehnen?' }}
+    </p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+      Abbrechen
+    </button>
+    <button mat-raised-button 
+            [color]="data.action === 'approve' ? 'primary' : 'warn'"
+            (click)="onConfirm()">
+      <mat-icon>{{ data.action === 'approve' ? 'check' : 'block' }}</mat-icon>
+      {{ data.action === 'approve' ? 'Genehmigen' : 'Ablehnen' }}
+    </button>
+  </mat-dialog-actions>
+</div>

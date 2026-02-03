@@ -1,0 +1,82 @@
+@use '../_dialog-styles' as *;
+
+.vacation-approval-dialog {
+  h2 {
+    @include dialog-title;
+  }
+}
+
+mat-dialog-content {
+  @include dialog-content;
+  
+  .info-card {
+    @include info-card;
+  }
+  
+  .confirmation-text {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 0;
+    padding: 16px;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    border-left: 4px solid #3f51b5;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.87);
+    
+    mat-icon {
+      color: #3f51b5;
+      flex-shrink: 0;
+    }
+  }
+}
+
+:host-context(.dark-theme) {
+  .info-card {
+    @include info-card-dark;
+  }
+  
+  mat-dialog-content .confirmation-text {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: #64b5f6;
+    color: rgba(255, 255, 255, 0.87);
+    
+    mat-icon {
+      color: #64b5f6;
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  mat-card.info-card {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    
+    label {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+    
+    span {
+      color: rgba(255, 255, 255, 0.87) !important;
+    }
+    
+    mat-icon {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+  }
+  
+  .confirmation-text {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-left-color: #64b5f6 !important;
+    color: rgba(255, 255, 255, 0.87) !important;
+    
+    mat-icon {
+      color: #64b5f6 !important;
+    }
+  }
+}
+
+mat-dialog-actions {
+  @include dialog-actions;
+}

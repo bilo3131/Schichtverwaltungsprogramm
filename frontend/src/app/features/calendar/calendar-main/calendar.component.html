@@ -1,0 +1,105 @@
+<div class="calendar-container">
+  <mat-card class="calendar-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>event</mat-icon>
+        <span>Terminkalender</span>
+      </mat-card-title>
+      <div class="header-actions">
+        <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen">
+          <mat-icon>info</mat-icon>
+        </button>
+        <button mat-raised-button (click)="openEventDialog()">
+          <mat-icon>add</mat-icon>
+          Neuer Termin
+        </button>
+      </div>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <div class="calendar-wrapper" [class.loading]="loading">
+        <div class="loading-overlay" *ngIf="loading">
+          <mat-icon class="spinning">refresh</mat-icon>
+          <p>Lade Termine...</p>
+        </div>
+        <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+      </div>
+      
+      <div class="calendar-legend">
+        <h4>Legende</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #2196F3;"></span>
+            <span>Meeting</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #4CAF50;"></span>
+            <span>Schulung</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #FF9800;"></span>
+            <span>Projekt</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #9C27B0;"></span>
+            <span>Firmenevent</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #607D8B;"></span>
+            <span>Sonstiges</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background-color: #ff6b6b;"></span>
+            <span>Feiertage</span>
+          </div>
+        </div>
+        <div class="calendar-hint">
+          <mat-icon>info</mat-icon>
+          <span>Klicken Sie auf einen Tag, um einen Termin zu erstellen. Events können per Drag & Drop verschoben werden.</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  
+  <!-- Info Box Overlay -->
+  <div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+  <mat-card class="info-box" *ngIf="showInfoBox">
+    <mat-card-content>
+      <div class="info-header">
+        <div class="info-title">
+          <mat-icon color="primary">info</mat-icon>
+          <h3>Informationen zum Kalender</h3>
+        </div>
+        <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="info-content">
+        <div class="info-section">
+          <h4><mat-icon>event</mat-icon> Was zeigt der Kalender?</h4>
+          <p>Der Kalender bietet eine Übersicht über alle Termine, Meetings, Schulungen, Projekte und Firmenevents. Feiertage werden farblich hervorgehoben.</p>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>add</mat-icon> Termin anlegen</h4>
+          <p>Klicken Sie auf einen Tag oder nutzen Sie den Button "Neuer Termin", um einen neuen Kalendereintrag zu erstellen.</p>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>edit</mat-icon> Bearbeiten & Aktionen</h4>
+          <ul>
+            <li><strong>Bearbeiten:</strong> Öffnet den Dialog zur Bearbeitung eines Termins</li>
+            <li><strong>Löschen:</strong> Entfernt den Termin aus dem Kalender</li>
+            <li><strong>Drag & Drop:</strong> Termine können per Drag & Drop verschoben werden</li>
+          </ul>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>info</mat-icon> Besonderheiten</h4>
+          <ul>
+            <li><strong>Legende:</strong> Farben und Kategorien werden in der Legende erklärt</li>
+            <li><strong>Filter:</strong> Termine können nach Abteilung oder Typ gefiltert werden</li>
+            <li><strong>Detailansicht:</strong> Ein Klick auf einen Termin öffnet die Detailansicht</li>
+          </ul>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

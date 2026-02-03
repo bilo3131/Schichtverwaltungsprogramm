@@ -1,0 +1,61 @@
+.shift-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 500px;
+  padding: 15px 0 1rem;
+
+  .week-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .week-range {
+    text-align: center;
+    color: rgba(0, 0, 0, 0.6);
+    margin: 0 0 1rem 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .weekdays-section {
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .weekdays {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 4px;
+    }
+  }
+}
+
+mat-dialog-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+// Dark Mode
+:host-context(.dark-theme) .shift-form {
+  .week-range {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .weekdays-section {
+    label {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .weekdays {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+}

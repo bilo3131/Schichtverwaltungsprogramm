@@ -1,0 +1,97 @@
+<h2 mat-dialog-title>{{ data.shiftType ? 'Schichttyp bearbeiten' : 'Neuer Schichttyp' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="shiftTypeForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="z.B. Frühschicht" required>
+      <mat-error *ngIf="shiftTypeForm.get('name')?.hasError('required')">
+        Name ist erforderlich
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Abteilung</mat-label>
+      <mat-select formControlName="department">
+        <mat-option [value]="null">Keine Abteilung</mat-option>
+        <mat-option *ngFor="let dept of departments" [value]="dept.id">
+          {{ dept.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Erforderliche Qualifikationen</mat-label>
+      <mat-select formControlName="required_qualifications" multiple>
+        <mat-option *ngFor="let qual of filteredQualifications" [value]="qual.id">
+          {{ qual.name }}
+        </mat-option>
+      </mat-select>
+      <mat-hint *ngIf="filteredQualifications.length === 0">Keine Qualifikationen für diese Abteilung verfügbar</mat-hint>
+      <mat-hint *ngIf="filteredQualifications.length > 0">Optional: Wählen Sie erforderliche Qualifikationen aus</mat-hint>
+    </mat-form-field>
+
+    <div class="time-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Startzeit</mat-label>
+        <input matInput type="time" formControlName="start_time" required>
+        <mat-error *ngIf="shiftTypeForm.get('start_time')?.hasError('required')">
+          Startzeit ist erforderlich
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Endzeit</mat-label>
+        <input matInput type="time" formControlName="end_time" required>
+        <mat-error *ngIf="shiftTypeForm.get('end_time')?.hasError('required')">
+          Endzeit ist erforderlich
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="color-picker-field">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Farbe</mat-label>
+        <input matInput formControlName="color" placeholder="#1976d2" pattern="^#[0-9A-Fa-f]{6}$" readonly>
+        <mat-error *ngIf="shiftTypeForm.get('color')?.hasError('pattern')">
+          Ungültiges Farbformat (z.B. #1976d2)
+        </mat-error>
+      </mat-form-field>
+      <input type="color" 
+             [value]="shiftTypeForm.get('color')?.value || '#1976d2'"
+             (input)="onColorChange($event)"
+             class="color-picker">
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mindestbesetzung</mat-label>
+      <input matInput type="number" formControlName="min_employees" min="1" required>
+      <mat-error *ngIf="shiftTypeForm.get('min_employees')?.hasError('required')">
+        Mindestbesetzung ist erforderlich
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Pausendauer (Minuten)</mat-label>
+      <input matInput type="number" formControlName="break_duration" min="0">
+      <mat-hint>Wird automatisch berechnet: ab 6h → 30 Min., ab 9h → 45 Min.</mat-hint>
+    </mat-form-field>
+
+    <div class="weekend-options">
+      <h4>Wochenend-Verfügbarkeit</h4>
+      <mat-checkbox formControlName="works_on_saturday">
+        Samstags verfügbar
+      </mat-checkbox>
+      <mat-checkbox formControlName="works_on_sunday">
+        Sonntags verfügbar
+      </mat-checkbox>
+    </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Abbrechen</button>
+  <button mat-raised-button color="primary" 
+          [disabled]="shiftTypeForm.invalid"
+          (click)="onSave()">
+    Speichern
+  </button>
+</mat-dialog-actions>

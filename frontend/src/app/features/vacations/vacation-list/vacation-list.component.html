@@ -1,0 +1,150 @@
+
+    <div class="vacation-list">
+      <div class="header">
+        <h1>Urlaub</h1>
+        <div class="header-actions">
+          <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
+            <mat-icon>info</mat-icon>
+          </button>
+          <button mat-raised-button color="primary" (click)="openVacationRequestDialog()">
+            <mat-icon>add</mat-icon>
+            Urlaub beantragen
+          </button>
+        </div>
+      </div>
+
+      <mat-card>
+        <mat-card-content>
+          <mat-tab-group>
+            <!-- Urlaubsanträge Tab -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">beach_access</mat-icon>
+                Urlaubsanträge
+                <span class="badge" *ngIf="pendingVacations > 0">{{ pendingVacations }}</span>
+              </ng-template>
+
+              <app-loading-spinner *ngIf="loadingVacations"></app-loading-spinner>
+
+              <div *ngIf="!loadingVacations && filteredVacationRequests.length === 0" class="empty-state">
+                <mat-icon>beach_access</mat-icon>
+                <p>Keine Urlaubsanträge vorhanden</p>
+              </div>
+
+              <table mat-table [dataSource]="filteredVacationRequests" *ngIf="!loadingVacations && filteredVacationRequests.length > 0" class="vacation-table">
+                <ng-container matColumnDef="employee">
+                  <th mat-header-cell *matHeaderCellDef>Mitarbeiter</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">{{ request.employee_name }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="start_date">
+                  <th mat-header-cell *matHeaderCellDef>Von</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">{{ request.start_date | date:'dd.MM.yyyy' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="end_date">
+                  <th mat-header-cell *matHeaderCellDef>Bis</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">{{ request.end_date | date:'dd.MM.yyyy' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="reason">
+                  <th mat-header-cell *matHeaderCellDef>Notizen</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">{{ request.notes || '-' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">
+                    <mat-chip [color]="getStatusColor(request.status)">
+                      {{ getStatusLabel(request.status) }}
+                    </mat-chip>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="approved_by">
+                  <th mat-header-cell *matHeaderCellDef>Bearbeitet von</th>
+                  <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">
+                    {{ request.approved_by_name || '-' }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                  <td mat-cell *matCellDef="let request">
+                    <button mat-icon-button color="accent" 
+                            *ngIf="canEdit(request)"
+                            (click)="editVacation(request)"
+                            matTooltip="Bearbeiten">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="primary" 
+                            *ngIf="canApprove(request)" 
+                            (click)="approveVacation(request)"
+                            matTooltip="Genehmigen">
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" 
+                            *ngIf="canApprove(request)"
+                            (click)="rejectVacation(request)"
+                            matTooltip="Ablehnen">
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" 
+                            *ngIf="canDelete(request)"
+                            (click)="deleteVacation(request)"
+                            matTooltip="Löschen">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="vacationColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: vacationColumns;" 
+                    [class.separator-row]="isFirstNonPendingRequest(row)"></tr>
+              </table>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Info Box Overlay -->
+      <div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+      <mat-card class="info-box" *ngIf="showInfoBox">
+        <mat-card-content>
+          <div class="info-header">
+            <div class="info-title">
+              <mat-icon color="primary">info</mat-icon>
+              <h3>Informationen zur Urlaubsverwaltung</h3>
+            </div>
+            <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="info-content">
+            <div class="info-section">
+              <h4><mat-icon>beach_access</mat-icon> Urlaubsanträge</h4>
+              <p>Hier können Sie Urlaubsanträge stellen, verwalten und genehmigen. Alle Anträge werden übersichtlich in einer Tabelle dargestellt.</p>
+            </div>
+            <div class="info-section" *ngIf="!isEmployee">
+              <h4><mat-icon>approval</mat-icon> Genehmigungsprozess</h4>
+              <p>Als Vorgesetzter können Sie Urlaubsanträge Ihrer Mitarbeiter direkt genehmigen oder ablehnen. Pending-Anträge werden am Anfang der Liste angezeigt.</p>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>warning</mat-icon> Besonderheiten</h4>
+              <ul>
+                <li><strong>Status-Anzeige:</strong> Anträge werden mit farbigen Chips gekennzeichnet (Ausstehend, Genehmigt, Abgelehnt)</li>
+                <li><strong>Kalendar-Ansicht:</strong> Klicken Sie auf einen Antrag, um die Urlaubstage in einer Kalenderansicht zu sehen</li>
+                <li><strong>Berechtigungen:</strong> Die Aktionen richten sich nach Ihrer Rolle und den Hierarchiestufen</li>
+                <li><strong>Sortierung:</strong> Pending-Anträge werden automatisch zuerst angezeigt</li>
+                <li><strong>Abteilungsfilter:</strong> Über den Abteilungsfilter können Sie Anträge nach Abteilung filtern</li>
+              </ul>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>edit</mat-icon> Bearbeitung</h4>
+              <p>Eigene ausstehende Anträge können bearbeitet oder gelöscht werden. Nach der Genehmigung ist keine Bearbeitung mehr möglich.</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  

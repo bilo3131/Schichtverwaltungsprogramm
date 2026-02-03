@@ -1,0 +1,46 @@
+Für eine Schichtplan-Software, die KMUs echten Mehrwert bietet, würde ich folgende Kern-Funktionen empfehlen:
+
+Essenzielle Funktionen:
+1. Mitarbeiterverwaltung
+
+Qualifikationen/Fähigkeiten zuordnen
+Verfügbarkeiten/Urlaubszeiten erfassen
+Arbeitszeitmodelle (Vollzeit, Teilzeit, Minijob)
+Maximale/minimale Wochenstunden
+2. Schichtplanung
+
+Drag & Drop-Interface für schnelle Planung
+Mehrere Schichttypen (Früh, Spät, Nacht)
+Automatische Konfliktprüfung (Überschneidungen, Ruhezeiten)
+Vorlagen für wiederkehrende Schichtmuster
+Mindestbesetzung pro Schicht definieren
+3. Automatisierung & Intelligenz
+
+Automatische Schichtvorschläge basierend auf:
+Qualifikationen
+Verfügbarkeiten
+Arbeitszeitgesetze (max. Stunden, Ruhezeiten)
+Faire Verteilung (Nachtschichten, Wochenenden)
+4. Kommunikation
+
+Schichtplan-Veröffentlichung an Mitarbeiter
+Benachrichtigungen bei Änderungen
+Tauschwünsche zwischen Mitarbeitern
+Urlaubsanträge
+5. Compliance & Arbeitszeitgesetz
+
+Einhaltung gesetzlicher Ruhezeiten (11h zwischen Schichten)
+Maximale Wochenarbeitszeit
+Dokumentation für Betriebsprüfungen
+6. Reporting
+
+Arbeitsstunden pro Mitarbeiter
+Kosten-Übersicht
+Auslastungsstatistiken
+Export für Lohnabrechnung
+Nice-to-have für später:
+Mobile App für Mitarbeiter
+Zeiterfassung/Stempeluhr-Integration
+Krankheitsverwaltung
+Integrationen (z.B. DATEV)
+Welche dieser Funktionen sind für dein konkretes Szenario am wichtigsten? Dann können wir priorisieren und mit der Entwicklung beginnen.

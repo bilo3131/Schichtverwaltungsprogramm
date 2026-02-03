@@ -1,0 +1,99 @@
+mat-dialog-content {
+  min-width: 400px;
+  padding-top: 15px;
+}
+
+form {
+  margin-top: 8px;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.time-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.color-picker-field {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1;
+  }
+
+  .color-picker {
+    width: 56px;
+    height: 56px;
+    border: 2px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: flex-start;
+    
+    &:hover {
+      border-color: rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.weekend-options {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.02);
+
+  h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  mat-checkbox {
+    display: block;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+}
+
+// Dark Mode
+:host-context(.dark-theme) {
+  mat-dialog-content {
+    color: rgba(255, 255, 255, 0.87);
+  }
+
+  .color-picker {
+    border-color: rgba(255, 255, 255, 0.12);
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .weekend-options {
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.02);
+
+    h4 {
+      color: rgba(255, 255, 255, 0.6);
+    }
+  }
+}

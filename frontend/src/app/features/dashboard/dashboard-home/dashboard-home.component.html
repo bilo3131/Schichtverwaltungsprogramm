@@ -1,0 +1,317 @@
+<div class="dashboard-home">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Willkommen, {{ currentUserName || 'Benutzer' }}!</h1>
+      <p class="header-subtitle">{{ getCurrentDateString() }}</p>
+    </div>
+  </div>
+
+  <!-- Skeleton Loader -->
+  <div class="stats-grid" *ngIf="loading">
+    <mat-card class="stat-card skeleton" *ngFor="let item of [1,2,3,4]">
+      <mat-card-content>
+        <div class="skeleton-icon"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-title"></div>
+          <div class="skeleton-text"></div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  
+  <!-- Persönliche KPIs (für alle User) -->
+  <div class="stats-grid" *ngIf="!loading">
+    <!-- Nächste Schicht -->
+    <mat-card class="stat-card clickable" [class.empty]="!stats.nextShift" (click)="navigateTo('/shifts')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon primary">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <span class="card-label">Nächste Schicht</span>
+        </div>
+        <div class="stat-info" *ngIf="stats.nextShift">
+          <h3>{{ stats.nextShift.time }}</h3>
+          <p class="stat-description">{{ stats.nextShift.date }}</p>
+          <span class="stat-badge info">{{ stats.nextShift.countdown }}</span>
+        </div>
+        <div class="empty-state" *ngIf="!stats.nextShift">
+          <mat-icon>event_available</mat-icon>
+          <p>Keine Schichten geplant</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Schichten diese Woche -->
+    <mat-card class="stat-card clickable" (click)="navigateTo('/shifts')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon success">
+            <mat-icon>calendar_month</mat-icon>
+          </div>
+          <span class="card-label">Diese Woche</span>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.shiftsThisWeek || 0 }} <span class="unit">Schichten</span></h3>
+          <p class="stat-description">{{ stats.hoursThisWeek || 0 }}h geplant</p>
+          <span class="trend" [class.positive]="stats.shiftsWeekTrend > 0" [class.negative]="stats.shiftsWeekTrend < 0" *ngIf="stats.shiftsWeekTrend !== 0">
+            <mat-icon>{{ stats.shiftsWeekTrend > 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            {{ stats.shiftsWeekTrend > 0 ? '+' : '' }}{{ stats.shiftsWeekTrend }} vs. letzte Woche
+          </span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Verfügbare Urlaubstage -->
+    <mat-card class="stat-card clickable" (click)="navigateTo('/vacations')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon vacation">
+            <mat-icon>beach_access</mat-icon>
+          </div>
+          <span class="card-label">Urlaubstage</span>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.remainingVacationDays || 0 }}<span class="unit">/{{ stats.totalVacationDays || 30 }}</span></h3>
+          <p class="stat-description">{{ stats.usedVacationDays || 0 }} verbraucht</p>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="getVacationProgress()"></div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Überstunden-Saldo -->
+    <mat-card class="stat-card clickable" (click)="navigateTo('/dashboard/shifts')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon" [class.success]="stats.overtimeHours >= 0" [class.warning]="stats.overtimeHours < 0">
+            <mat-icon>{{ stats.overtimeHours >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+          </div>
+          <span class="card-label">Überstunden-Saldo</span>
+        </div>
+        <div class="stat-info">
+          <h3 [class.positive]="stats.overtimeHours > 0" [class.negative]="stats.overtimeHours < 0">
+            {{ formatOvertimeHours(stats.overtimeHours || 0) }}
+          </h3>
+          <p class="stat-description">Gesamt</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Wichtige Termine/Events -->
+    <mat-card class="stat-card clickable" [class.empty]="stats.upcomingEvents === 0" (click)="navigateTo('/calendar')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon" [class.primary]="stats.upcomingEvents > 0" [class.neutral]="stats.upcomingEvents === 0">
+            <mat-icon>event</mat-icon>
+          </div>
+          <span class="card-label">Termine</span>
+        </div>
+        <div class="stat-info" *ngIf="stats.upcomingEvents > 0">
+          <h3>{{ stats.upcomingEvents }}</h3>
+          <p class="stat-description">Nächste 7 Tage</p>
+          <span class="stat-badge info" *ngIf="stats.nextEventDate">{{ stats.nextEventDate }}</span>
+        </div>
+        <div class="empty-state" *ngIf="stats.upcomingEvents === 0">
+          <mat-icon>event_available</mat-icon>
+          <p>Keine Termine geplant</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Manager-Bereich -->
+  <div class="manager-section" *ngIf="authService.isManager && !loading">
+    <h2>
+      <mat-icon>admin_panel_settings</mat-icon>
+      Management-Übersicht
+    </h2>
+    
+    <div class="stats-grid manager-grid">
+      <!-- Planungsfortschritt -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/shifts')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon primary">
+              <mat-icon>assignment_turned_in</mat-icon>
+            </div>
+            <span class="card-label">Planungsfortschritt</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.planningProgress || 0 }}<span class="unit">%</span></h3>
+            <p class="stat-description">
+              <strong>{{ stats.planStatusText || 'Entwurf' }}</strong> · {{ stats.planStatusDate || 'Diese Woche' }}
+            </p>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="stats.planningProgress"></div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Genehmigungsstatistik -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/vacations')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon success">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <span class="card-label">Genehmigungen</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.approvalRate || 0 }}<span class="unit">%</span></h3>
+            <p class="stat-description">{{ stats.approvedCount || 0 }} ✓ / {{ stats.rejectedCount || 0 }} ✗</p>
+            <div class="mini-chart" *ngIf="stats.avgApprovalTime > 0">
+              <mat-icon>timer</mat-icon>
+              <span>Ø {{ stats.avgApprovalTime }} Tage Bearbeitungszeit</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Mitarbeiter-Auslastung -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/shifts')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon" [class.warning]="stats.avgTeamUtilization > 90 || stats.avgTeamUtilization < 70" [class.success]="stats.avgTeamUtilization >= 70 && stats.avgTeamUtilization <= 90">
+              <mat-icon>assessment</mat-icon>
+            </div>
+            <span class="card-label">Team-Auslastung</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.avgTeamUtilization || 0 }}<span class="unit">%</span></h3>
+            <p class="stat-description">Durchschnitt</p>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="stats.avgTeamUtilization" [class.overtime]="stats.avgTeamUtilization > 100"></div>
+            </div>
+            <span class="stat-badge warning" *ngIf="stats.overloadedEmployees > 0">{{ stats.overloadedEmployees }} überlastet</span>
+            <span class="stat-badge info" *ngIf="stats.underloadedEmployees > 0">{{ stats.underloadedEmployees }} unterlastet</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Unterbesetzte Schichten -->
+      <mat-card class="stat-card clickable" [class.critical]="stats.understaffedShifts > 0" (click)="navigateTo('/shifts')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon" [class.danger]="stats.understaffedShifts > 0" [class.neutral]="stats.understaffedShifts === 0">
+              <mat-icon>warning</mat-icon>
+            </div>
+            <span class="card-label">Unterbesetzt</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.understaffedShifts || 0 }}</h3>
+            <p class="stat-description">Aktuelle Woche</p>
+            <span class="stat-badge danger" *ngIf="stats.understaffedShifts > 0">Aktion erforderlich!</span>
+            <span class="stat-badge success" *ngIf="stats.understaffedShifts === 0">Alles besetzt ✓</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Offene Urlaubsanträge -->
+      <mat-card class="stat-card clickable" [class.pending]="stats.pendingVacations > 0" (click)="navigateTo('/vacations')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon" [class.warning]="stats.pendingVacations > 0" [class.neutral]="stats.pendingVacations === 0">
+              <mat-icon>pending_actions</mat-icon>
+            </div>
+            <span class="card-label">Offene Anträge</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.pendingVacations || 0 }}</h3>
+            <p class="stat-description">{{ stats.approvedCount || 0 }} ✓ / {{ stats.rejectedCount || 0 }} ✗</p>
+            <span class="stat-badge warning" *ngIf="stats.pendingVacations > 0">Genehmigung ausstehend</span>
+            <span class="stat-badge neutral" *ngIf="stats.pendingVacations === 0">Keine offenen Anträge</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Krankenstand -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/absences')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon sick">
+              <mat-icon>sick</mat-icon>
+            </div>
+            <span class="card-label">Krankenstand</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.sickRate || 0 }}<span class="unit">%</span></h3>
+            <p class="stat-description">{{ stats.sickEmployees || 0 }} von {{ stats.totalEmployees || 0 }} Mitarbeiter</p>
+            <span class="trend" [class.negative]="stats.sickRateTrend > 0" [class.positive]="stats.sickRateTrend < 0" *ngIf="stats.sickRateTrend !== 0">
+              <mat-icon>{{ stats.sickRateTrend > 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+              {{ stats.sickRateTrend > 0 ? '+' : '' }}{{ stats.sickRateTrend }}% vs. Vorwoche
+            </span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Im Urlaub -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/absences')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon vacation">
+              <mat-icon>flight_takeoff</mat-icon>
+            </div>
+            <span class="card-label">Im Urlaub</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.onVacation || 0 }}</h3>
+            <p class="stat-description">Mitarbeiter heute</p>
+            <div class="mini-chart" *ngIf="stats.vacationUpcoming > 0">
+              <mat-icon>trending_up</mat-icon>
+              <span>+{{ stats.vacationUpcoming }} nächste Woche</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Überstunden Team -->
+      <mat-card class="stat-card clickable" (click)="navigateTo('/dashboard/employees')">
+        <mat-card-content>
+          <div class="card-header">
+            <div class="stat-icon overtime">
+              <mat-icon>schedule</mat-icon>
+            </div>
+            <span class="card-label">Überstunden</span>
+          </div>
+          <div class="stat-info">
+            <h3>{{ formatOvertimeHours(stats.totalOvertime || 0) }}</h3>
+            <p class="stat-description">Ø {{ formatOvertimeHours(stats.avgOvertime || 0) }} pro Mitarbeiter</p>
+            <span class="trend" [class.negative]="stats.overtimeTrend > 0" [class.positive]="stats.overtimeTrend < 0" *ngIf="stats.overtimeTrend !== 0">
+              <mat-icon>{{ stats.overtimeTrend > 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+              {{ stats.overtimeTrend > 0 ? '+' : '' }}{{ stats.overtimeTrend }}h vs. Vormonat
+            </span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Schnellaktionen -->
+  <div class="quick-actions">
+    <h2>
+      <mat-icon>bolt</mat-icon>
+      Schnellaktionen
+    </h2>
+    <div class="actions-grid">
+      <button mat-raised-button color="primary" routerLink="/shifts" class="action-button">
+        <mat-icon>calendar_today</mat-icon>
+        <span>Schichtplan ansehen</span>
+      </button>
+      <button mat-raised-button routerLink="/vacations" class="action-button">
+        <mat-icon>beach_access</mat-icon>
+        <span>Urlaub beantragen</span>
+      </button>
+      <button mat-raised-button *ngIf="authService.isManager" routerLink="/shift-types" class="action-button">
+        <mat-icon>add_circle</mat-icon>
+        <span>Schicht erstellen</span>
+      </button>
+      <button mat-raised-button *ngIf="authService.isManager" routerLink="/employees" class="action-button">
+        <mat-icon>people</mat-icon>
+        <span>Personal verwalten</span>
+      </button>
+    </div>
+  </div>
+</div>

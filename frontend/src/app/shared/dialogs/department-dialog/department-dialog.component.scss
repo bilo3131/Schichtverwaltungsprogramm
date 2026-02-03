@@ -1,0 +1,23 @@
+mat-dialog-content {
+  min-width: 400px;
+  padding: 15px 1.5rem 1.5rem;
+}
+
+form {
+  margin-top: 8px;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+mat-dialog-actions {
+  padding: 1rem 1.5rem;
+  margin: 0;
+}
+
+// Dark Mode
+:host-context(.dark-theme) mat-dialog-content {
+  color: rgba(255, 255, 255, 0.87);
+}

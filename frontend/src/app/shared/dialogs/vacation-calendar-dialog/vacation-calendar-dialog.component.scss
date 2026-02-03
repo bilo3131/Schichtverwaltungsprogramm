@@ -1,0 +1,228 @@
+.vacation-calendar-dialog {
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 24px 24px 16px;
+    
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+mat-dialog-content {
+  min-width: 500px;
+  max-width: 600px;
+  padding: 0 24px 24px;
+  overflow-x: hidden;
+}
+
+.info-card {
+  margin-bottom: 24px;
+  
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    
+    .info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+      
+      mat-icon {
+        color: rgba(0, 0, 0, 0.54);
+        margin-top: 2px;
+        flex-shrink: 0;
+      }
+      
+      div {
+        flex: 1;
+        min-width: 0;
+        
+        label {
+          display: block;
+          font-size: 0.75rem;
+          color: rgba(0, 0, 0, 0.6);
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 500;
+        }
+        
+        span {
+          display: block;
+          font-size: 0.95rem;
+          color: rgba(0, 0, 0, 0.87);
+          word-break: break-word;
+        }
+      }
+    }
+  }
+}
+
+:host-context(.dark-theme) .info-card {
+  .info-item {
+    mat-icon {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    div {
+      label {
+        color: rgba(255, 255, 255, 0.6);
+      }
+      
+      span {
+        color: rgba(255, 255, 255, 0.87);
+      }
+    }
+  }
+}
+
+.calendar-card {
+  mat-card-header {
+    margin-bottom: 16px;
+    
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      margin: 0;
+      
+      mat-icon {
+        color: #3f51b5;
+      }
+    }
+  }
+  
+  mat-card-content {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+  }
+  
+  ::ng-deep .mat-calendar {
+    width: 100%;
+    max-width: 450px;
+    
+    .mat-calendar-body-cell-content {
+      border-radius: 8px;
+    }
+  }
+}
+
+:host-context(.dark-theme) .calendar-card {
+  mat-card-header mat-card-title mat-icon {
+    color: #64b5f6;
+  }
+}
+
+.legend {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    
+    .legend-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .vacation-day {
+      background-color: #2196F3;
+      border-color: #1976D2;
+    }
+    
+    .weekend {
+      background-color: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+  }
+}
+
+:host-context(.dark-theme) .legend {
+  background-color: rgba(255, 255, 255, 0.05);
+  
+  .legend-item .legend-color {
+    border-color: rgba(255, 255, 255, 0.2);
+    
+    &.weekend {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+::ng-deep .vacation-date {
+  background-color: #2196F3 !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    box-shadow: 0 0 0 2px #1976D2;
+  }
+}
+
+::ng-deep .vacation-date:hover {
+  background-color: #1976D2 !important;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+::ng-deep .mat-calendar-body-disabled .vacation-date {
+  opacity: 0.7;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+  
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  mat-dialog-content {
+    min-width: auto;
+    max-width: 100%;
+  }
+  
+  .info-card .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .legend {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

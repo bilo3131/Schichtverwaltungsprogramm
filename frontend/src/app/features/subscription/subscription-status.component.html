@@ -1,0 +1,104 @@
+<div class="subscription-status" *ngIf="subscription && limits">
+  <mat-card>
+    <mat-card-header>
+      <div class="header-content">
+        <div class="tier-info">
+          <mat-icon>workspace_premium</mat-icon>
+          <h2>{{ limits.tier_display }}</h2>
+          <mat-chip [color]="getTierColor(limits.tier)">{{ limits.tier_display }}</mat-chip>
+        </div>
+        <button mat-icon-button (click)="refresh()" matTooltip="Aktualisieren">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Abteilungen -->
+      <div class="limit-section">
+        <div class="limit-header">
+          <mat-icon>corporate_fare</mat-icon>
+          <h3>Abteilungen</h3>
+        </div>
+        <div class="limit-content">
+          <div class="limit-stats">
+            <span class="current">{{ limits.departments.current }}</span>
+            <span class="separator">/</span>
+            <span class="max">{{ limits.departments.unlimited ? '∞' : limits.departments.max }}</span>
+          </div>
+          <mat-progress-bar 
+            *ngIf="!limits.departments.unlimited"
+            mode="determinate" 
+            [value]="getDepartmentPercentage()"
+            [color]="getDepartmentPercentage() > 90 ? 'warn' : 'primary'">
+          </mat-progress-bar>
+          <div class="limit-status">
+            <mat-icon *ngIf="limits.departments.can_add" class="status-icon success">check_circle</mat-icon>
+            <mat-icon *ngIf="!limits.departments.can_add" class="status-icon error">cancel</mat-icon>
+            <span>{{ limits.departments.can_add ? 'Weitere Abteilungen können hinzugefügt werden' : 'Limit erreicht' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mitarbeiter -->
+      <div class="limit-section">
+        <div class="limit-header">
+          <mat-icon>people</mat-icon>
+          <h3>Mitarbeiter</h3>
+        </div>
+        <div class="limit-content">
+          <div class="limit-stats">
+            <span class="current">{{ limits.employees.current }}</span>
+            <span class="separator">/</span>
+            <span class="max">{{ limits.employees.unlimited ? '∞' : limits.employees.max }}</span>
+          </div>
+          <mat-progress-bar 
+            *ngIf="!limits.employees.unlimited"
+            mode="determinate" 
+            [value]="getEmployeePercentage()"
+            [color]="getEmployeePercentage() > 90 ? 'warn' : 'primary'">
+          </mat-progress-bar>
+          <div class="limit-status">
+            <mat-icon *ngIf="limits.employees.can_add" class="status-icon success">check_circle</mat-icon>
+            <mat-icon *ngIf="!limits.employees.can_add" class="status-icon error">cancel</mat-icon>
+            <span>{{ limits.employees.can_add ? 'Weitere Mitarbeiter können hinzugefügt werden' : 'Limit erreicht' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preis -->
+      <div class="pricing-section">
+        <div class="pricing-header">
+          <mat-icon>euro</mat-icon>
+          <h3>Aktuelle Kosten</h3>
+        </div>
+        <div class="pricing-content">
+          <div class="price-breakdown">
+            <div class="price-item">
+              <span class="label">Grundpreis:</span>
+              <span class="value">{{ limits.pricing.base_price | number:'1.2-2' }} €</span>
+            </div>
+            <div class="price-item">
+              <span class="label">Pro Mitarbeiter:</span>
+              <span class="value">{{ limits.pricing.price_per_employee | number:'1.2-2' }} €</span>
+            </div>
+            <div class="price-item">
+              <span class="label">Mitarbeiter ({{ limits.employees.current }}):</span>
+              <span class="value">{{ (limits.employees.current * limits.pricing.price_per_employee) | number:'1.2-2' }} €</span>
+            </div>
+          </div>
+          <div class="total-price">
+            <span class="label">Gesamt pro Monat:</span>
+            <span class="value">{{ limits.pricing.monthly_cost | number:'1.2-2' }} €</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="status-section" *ngIf="limits.status.subscription_end_date">
+        <mat-icon>schedule</mat-icon>
+        <span>Läuft bis: {{ limits.status.subscription_end_date | date:'dd.MM.yyyy' }}</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

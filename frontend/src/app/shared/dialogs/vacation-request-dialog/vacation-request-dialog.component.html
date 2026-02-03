@@ -1,0 +1,58 @@
+<h2 mat-dialog-title>{{ data.vacation ? 'Urlaubsantrag bearbeiten' : 'Urlaub beantragen' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="vacationForm">
+    <mat-form-field appearance="outline" class="full-width" *ngIf="isSupervisor">
+      <mat-label>Mitarbeiter</mat-label>
+      <mat-select formControlName="employee" required>
+        <mat-option *ngFor="let emp of employees" [value]="emp.id">
+          {{ emp.full_name }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="vacationForm.get('employee')?.hasError('required')">
+        Bitte wählen Sie einen Mitarbeiter
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Von</mat-label>
+      <input matInput [matDatepicker]="startPicker" formControlName="start_date" required>
+      <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+      <mat-error *ngIf="vacationForm.get('start_date')?.hasError('required')">
+        Bitte wählen Sie ein Startdatum
+      </mat-error>
+      <mat-error *ngIf="vacationForm.hasError('dateRange') && !vacationForm.get('start_date')?.hasError('required')">
+        Das Startdatum muss vor dem Enddatum liegen
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Bis</mat-label>
+      <input matInput [matDatepicker]="endPicker" formControlName="end_date" required>
+      <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+      <mat-datepicker #endPicker></mat-datepicker>
+      <mat-error *ngIf="vacationForm.get('end_date')?.hasError('required')">
+        Bitte wählen Sie ein Enddatum
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Notizen (optional)</mat-label>
+      <textarea matInput formControlName="notes" rows="3" 
+                placeholder="Grund oder zusätzliche Informationen"></textarea>
+    </mat-form-field>
+
+    <mat-error *ngIf="vacationForm.hasError('overlap')" class="overlap-error">
+      <mat-icon>error</mat-icon>
+      Es existiert bereits ein genehmigter oder ausstehender Urlaubsantrag für diesen Zeitraum.
+    </mat-error>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Abbrechen</button>
+  <button mat-raised-button color="primary" 
+          [disabled]="vacationForm.invalid"
+          (click)="onSave()">
+    Beantragen
+  </button>
+</mat-dialog-actions>

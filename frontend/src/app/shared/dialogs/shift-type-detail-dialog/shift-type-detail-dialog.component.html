@@ -1,0 +1,114 @@
+
+    <h2 mat-dialog-title>
+      <mat-icon>category</mat-icon>
+      Schichttyp Details
+    </h2>
+    <mat-dialog-content style="padding-top: 15px;">
+      <div class="shift-type-details">
+        <div class="detail-section">
+          <h3>Grundinformationen</h3>
+          <div class="detail-row">
+            <span class="label">Name:</span>
+            <span class="value">{{ shiftType.name }}</span>
+          </div>
+          <div class="detail-row" *ngIf="shiftType.department_details">
+            <span class="label">Abteilung:</span>
+            <span class="value">{{ shiftType.department_details.name }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Farbe:</span>
+            <span class="value">
+              <div class="color-indicator" [style.background-color]="shiftType.color"></div>
+              {{ shiftType.color }}
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Arbeitszeiten</h3>
+          <div class="detail-row">
+            <span class="label">Startzeit:</span>
+            <span class="value">{{ shiftType.start_time }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Endzeit:</span>
+            <span class="value">{{ shiftType.end_time }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Dauer:</span>
+            <span class="value">{{ calculateDuration() }} Stunden</span>
+          </div>
+          <div class="detail-row" *ngIf="shiftType.break_duration">
+            <span class="label">Pausendauer:</span>
+            <span class="value">{{ shiftType.break_duration }} Minuten</span>
+          </div>
+          <div class="detail-row" *ngIf="shiftType.night_hours">
+            <span class="label">Nachtarbeitsstunden:</span>
+            <span class="value">{{ shiftType.night_hours | number:'1.2-2' }} Stunden</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Personalplanung</h3>
+          <div class="detail-row">
+            <span class="label">Mindestbesetzung:</span>
+            <span class="value">{{ shiftType.min_employees }} Mitarbeiter</span>
+          </div>
+          <div class="detail-row" *ngIf="shiftType.qualification_details && shiftType.qualification_details.length > 0">
+            <span class="label">Erforderliche Qualifikationen:</span>
+            <span class="value">
+              <mat-chip *ngFor="let qual of shiftType.qualification_details">
+                {{ qual.name }}
+              </mat-chip>
+            </span>
+          </div>
+          <div class="detail-row" *ngIf="!shiftType.qualification_details || shiftType.qualification_details.length === 0">
+            <span class="label">Erforderliche Qualifikationen:</span>
+            <span class="value">Keine</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Wochenend-Verfügbarkeit</h3>
+          <div class="detail-row">
+            <span class="label">Samstags verfügbar:</span>
+            <span class="value">
+              <mat-icon [color]="shiftType.works_on_saturday ? 'primary' : ''">
+                {{ shiftType.works_on_saturday ? 'check_circle' : 'cancel' }}
+              </mat-icon>
+              {{ shiftType.works_on_saturday ? 'Ja' : 'Nein' }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Sonntags verfügbar:</span>
+            <span class="value">
+              <mat-icon [color]="shiftType.works_on_sunday ? 'primary' : ''">
+                {{ shiftType.works_on_sunday ? 'check_circle' : 'cancel' }}
+              </mat-icon>
+              {{ shiftType.works_on_sunday ? 'Ja' : 'Nein' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-section" *ngIf="shiftType.department_details?.description">
+          <h3>Abteilungsbeschreibung</h3>
+          <p class="description">{{ shiftType.department_details?.description }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Metadaten</h3>
+          <div class="detail-row" *ngIf="shiftType.created_at">
+            <span class="label">Erstellt am:</span>
+            <span class="value">{{ shiftType.created_at | date:'dd.MM.yyyy HH:mm' }} Uhr</span>
+          </div>
+        </div>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        Bearbeiten
+      </button>
+      <button mat-button mat-dialog-close>Schließen</button>
+    </mat-dialog-actions>
+  

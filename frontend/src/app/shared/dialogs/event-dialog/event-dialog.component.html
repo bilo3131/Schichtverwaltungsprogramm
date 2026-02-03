@@ -1,0 +1,142 @@
+<h2 mat-dialog-title>
+  <mat-icon>{{ data.event ? 'edit' : 'add' }}</mat-icon>
+  {{ data.event ? 'Event bearbeiten' : 'Neues Event erstellen' }}
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="eventForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Titel</mat-label>
+      <input matInput formControlName="title" required>
+      <mat-error *ngIf="eventForm.get('title')?.hasError('required')">
+        Titel ist erforderlich
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Event-Typ</mat-label>
+      <mat-select formControlName="event_type" required>
+        <mat-option value="meeting">
+          <mat-icon>groups</mat-icon> Meeting
+        </mat-option>
+        <mat-option value="training">
+          <mat-icon>school</mat-icon> Schulung
+        </mat-option>
+        <mat-option value="project">
+          <mat-icon>assignment</mat-icon> Projekt-Termin
+        </mat-option>
+        <mat-option value="company">
+          <mat-icon>celebration</mat-icon> Firmenevent
+        </mat-option>
+        <mat-option value="other">
+          <mat-icon>event</mat-icon> Sonstiges
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Startdatum</mat-label>
+        <input matInput [matDatepicker]="startPicker" formControlName="start_date" required>
+        <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width" *ngIf="!eventForm.get('is_all_day')?.value">
+        <mat-label>Startzeit</mat-label>
+        <input matInput type="time" formControlName="start_time" required>
+      </mat-form-field>
+    </div>
+
+    <div class="row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Enddatum</mat-label>
+        <input matInput [matDatepicker]="endPicker" formControlName="end_date" required>
+        <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width" *ngIf="!eventForm.get('is_all_day')?.value">
+        <mat-label>Endzeit</mat-label>
+        <input matInput type="time" formControlName="end_time" required>
+      </mat-form-field>
+    </div>
+
+    <mat-checkbox formControlName="is_all_day" class="full-width checkbox-field">
+      Ganztägig
+    </mat-checkbox>
+
+    <mat-checkbox formControlName="editable_by_attendees" class="full-width checkbox-field">
+      <mat-icon>edit</mat-icon>
+      Von Teilnehmern bearbeitbar
+    </mat-checkbox>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Ort/Raum</mat-label>
+      <input matInput formControlName="location">
+      <mat-icon matIconPrefix>place</mat-icon>
+    </mat-form-field>
+
+    <div class="department-quick-add">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Schnell hinzufügen: Abteilungen</mat-label>
+        <mat-select #deptSelect multiple [(value)]="selectedDepartments" (valueChange)="addDepartmentEmployees($event)">
+          <mat-option (click)="toggleAllDepartments($event)" class="select-all-option">
+            <mat-icon>done_all</mat-icon> <strong>Alle Abteilungen</strong>
+          </mat-option>
+          <mat-option disabled class="divider-option"></mat-option>
+          <mat-option *ngFor="let dept of data.departments" [value]="dept.id">
+            <mat-icon>business</mat-icon> {{ dept.name }}
+          </mat-option>
+        </mat-select>
+        <mat-hint>Fügt alle Mitarbeiter der ausgewählten Abteilungen als Teilnehmer hinzu</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Teilnehmer</mat-label>
+      <mat-select formControlName="attendees" multiple #attendeeSelect>
+        <mat-option class="search-option">
+          <div class="search-box" (click)="$event.stopPropagation()">
+            <mat-icon>search</mat-icon>
+            <input 
+              matInput 
+              [(ngModel)]="employeeSearchTerm" 
+              [ngModelOptions]="{standalone: true}"
+              (input)="filterEmployees()"
+              placeholder="Mitarbeiter suchen..."
+              (click)="$event.stopPropagation()"
+              (keydown)="$event.stopPropagation()"
+              (mousedown)="$event.stopPropagation()">
+          </div>
+        </mat-option>
+        <mat-option (click)="toggleAllAttendees($event)" class="clear-all-option">
+          <mat-icon>people</mat-icon> <strong>Alle Teilnehmer</strong>
+        </mat-option>
+        <mat-option disabled class="divider-option"></mat-option>
+        <mat-option *ngFor="let emp of filteredEmployees" [value]="emp.id">
+          {{ emp.full_name }}
+          <span class="employee-department" *ngIf="emp.department_details"> ({{ emp.department_details.name }})</span>
+        </mat-option>
+      </mat-select>
+      <mat-hint>{{ getSelectedEmployeesCount() }} Teilnehmer ausgewählt</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Beschreibung</mat-label>
+      <textarea matInput formControlName="description" rows="4"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Abbrechen</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onSave()"
+    [disabled]="!eventForm.valid || loading">
+    <mat-icon>{{ data.event ? 'save' : 'add' }}</mat-icon>
+    {{ data.event ? 'Speichern' : 'Erstellen' }}
+  </button>
+</mat-dialog-actions>

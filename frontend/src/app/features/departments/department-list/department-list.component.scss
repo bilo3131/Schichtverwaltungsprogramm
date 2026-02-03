@@ -1,0 +1,225 @@
+.department-list {
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+
+        .header-actions {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+        }
+
+        button {
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+
+    .departments-table {
+      width: 100%;
+
+      .mat-mdc-row:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+        cursor: pointer;
+      }
+
+      .clickable-cell {
+        cursor: pointer;
+      }
+    }
+
+// Dark Mode
+:host-context(.dark-theme) .department-list {
+  .header {
+    h1 {
+      color: #ffffff;
+    }
+  }
+
+  .departments-table {
+    .mat-mdc-row:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+}
+
+:host-context(.dark-theme) .info-box {
+  background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+
+  .info-header {
+    .info-title {
+      h3 {
+        color: #64b5f6;
+      }
+    }
+  }
+
+  .info-content {
+    .info-section {
+      h4 {
+        color: #ffffff;
+
+        mat-icon {
+          color: #64b5f6;
+        }
+      }
+
+      p {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      ul li {
+        color: rgba(255, 255, 255, 0.8);
+
+        strong {
+          color: #ffffff;
+        }
+      }
+    }
+  }
+}
+
+    mat-dialog-content {
+      min-width: 400px;
+      padding: 1.5rem;
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    mat-dialog-actions {
+      padding: 1rem 1.5rem;
+      margin: 0;
+    }
+
+    .info-box-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .info-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      z-index: 1001;
+      animation: slideIn 0.3s ease;
+      margin: 0;
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      border-left: 4px solid #2196f3;
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -45%);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%);
+        }
+      }
+
+      & {
+        margin-top: 2rem;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-left: 4px solid #2196f3;
+      }
+
+      .info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        .info-title {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
+          mat-icon {
+            font-size: 28px;
+            width: 28px;
+            height: 28px;
+          }
+
+          h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #1976d2;
+          }
+        }
+      }
+
+      .info-content {
+        .info-section {
+          margin-bottom: 1.5rem;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #424242;
+
+            mat-icon {
+              font-size: 20px;
+              width: 20px;
+              height: 20px;
+              color: #1976d2;
+            }
+          }
+
+          p {
+            margin: 0 0 0.5rem 0;
+            line-height: 1.6;
+            color: #616161;
+          }
+
+          ul {
+            margin: 0.5rem 0 0 0;
+            padding-left: 1.5rem;
+            
+            li {
+              margin-bottom: 0.5rem;
+              line-height: 1.6;
+              color: #616161;
+
+              strong {
+                color: #424242;
+              }
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+            }
+          }
+        }
+      }
+    }

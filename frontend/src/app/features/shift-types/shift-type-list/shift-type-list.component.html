@@ -1,0 +1,123 @@
+<div class="shift-type-list">
+      <div class="header">
+        <h1>Schichten</h1>
+        <div class="header-actions">
+          <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
+            <mat-icon>info</mat-icon>
+          </button>
+          <button mat-raised-button color="primary" (click)="openShiftTypeDialog()">
+            <mat-icon>add</mat-icon>
+            Neuer Schichttyp
+          </button>
+        </div>
+      </div>
+
+      <mat-card>
+        <mat-card-content>
+          <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+          <div *ngIf="!loading && shiftTypes.length === 0" class="empty-state">
+            <mat-icon>category</mat-icon>
+            <p>Keine Schichttypen vorhanden</p>
+          </div>
+
+          <table mat-table [dataSource]="shiftTypes" *ngIf="!loading && shiftTypes.length > 0" class="shift-types-table">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let type">
+                {{ type.name }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="department">
+              <th mat-header-cell *matHeaderCellDef>Abteilung</th>
+              <td mat-cell *matCellDef="let type">{{ type.department_details?.name || '-' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="start_time">
+              <th mat-header-cell *matHeaderCellDef>Startzeit</th>
+              <td mat-cell *matCellDef="let type">{{ type.start_time }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="end_time">
+              <th mat-header-cell *matHeaderCellDef>Endzeit</th>
+              <td mat-cell *matCellDef="let type">{{ type.end_time }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="color">
+              <th mat-header-cell *matHeaderCellDef>Farbe</th>
+              <td mat-cell *matCellDef="let type">
+                <div class="color-indicator" [style.background-color]="type.color"></div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="break_duration">
+              <th mat-header-cell *matHeaderCellDef>Pause (Min.)</th>
+              <td mat-cell *matCellDef="let type">{{ type.break_duration || 0 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="night_hours">
+              <th mat-header-cell *matHeaderCellDef>Nachtarbeit (h)</th>
+              <td mat-cell *matCellDef="let type">{{ formatNightHours(type.night_hours) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+              <td mat-cell *matCellDef="let type" (click)="$event.stopPropagation()">
+                <button mat-icon-button color="primary" (click)="openShiftTypeDialog(type)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteShiftType(type.id)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="openShiftTypeDetailDialog(row)" class="clickable-row"></tr>
+          </table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Info Box Overlay -->
+      <div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+      <mat-card class="info-box" *ngIf="showInfoBox">
+        <mat-card-content>
+          <div class="info-header">
+            <div class="info-title">
+              <mat-icon color="primary">info</mat-icon>
+              <h3>Informationen zu Schichttypen</h3>
+            </div>
+            <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="info-content">
+            <div class="info-section">
+              <h4><mat-icon>category</mat-icon> Was sind Schichttypen?</h4>
+              <p>Schichttypen definieren die Rahmenbedingungen für einzelne Schichten, z.B. Früh-, Spät- oder Nachtschicht. Sie legen Start-/Endzeit, Pausen, Farbe und weitere Eigenschaften fest.</p>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>add</mat-icon> Schichttyp anlegen</h4>
+              <p>Mit "Neuer Schichttyp" können Sie einen neuen Typ für Ihre Abteilung anlegen. Sie können die Eigenschaften jederzeit bearbeiten.</p>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>edit</mat-icon> Bearbeiten & Aktionen</h4>
+              <ul>
+                <li><strong>Bearbeiten:</strong> Öffnet den Dialog zur Bearbeitung des Schichttyps</li>
+                <li><strong>Löschen:</strong> Entfernt den Schichttyp (nur wenn er nicht verwendet wird)</li>
+                <li><strong>Detailansicht:</strong> Ein Klick auf eine Zeile öffnet die Detailansicht</li>
+              </ul>
+            </div>
+            <div class="info-section">
+              <h4><mat-icon>info</mat-icon> Besonderheiten</h4>
+              <ul>
+                <li><strong>Farbe:</strong> Jede Schichtart kann farblich hervorgehoben werden</li>
+                <li><strong>Nachtarbeit:</strong> Nachtstunden werden automatisch berechnet</li>
+                <li><strong>Pausen:</strong> Pausenzeit kann individuell pro Schichttyp festgelegt werden</li>
+              </ul>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>

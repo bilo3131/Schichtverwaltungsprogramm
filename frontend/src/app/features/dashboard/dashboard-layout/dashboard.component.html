@@ -1,0 +1,156 @@
+<mat-toolbar color="primary" class="toolbar">
+  <button mat-icon-button (click)="sidenavOpened = !sidenavOpened">
+    <mat-icon>menu</mat-icon>
+  </button>
+  
+  <span class="app-title">Schichtplan Verwaltung</span>
+  
+  <span class="spacer"></span>
+  
+  <!-- Benachrichtigungen -->
+  <button mat-icon-button [matMenuTriggerFor]="notificationMenu" [matBadge]="unreadCount" [matBadgeHidden]="unreadCount === 0" matBadgeColor="warn">
+    <mat-icon>notifications</mat-icon>
+  </button>
+  
+  <mat-menu #notificationMenu="matMenu" class="notification-menu">
+    <div class="notification-header" (click)="$event.stopPropagation()">
+      <h3>Benachrichtigungen</h3>
+      <button mat-button color="primary" (click)="markAllAsRead()" *ngIf="unreadCount > 0">
+        Alle als gelesen markieren
+      </button>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="notification-list" (click)="$event.stopPropagation()">
+      <ng-container *ngIf="notifications.length > 0; else noNotifications">
+        <div *ngFor="let notification of notifications" 
+             class="notification-item" 
+             [class.unread]="!notification.is_read"
+             (click)="markAsRead(notification)">
+          <div class="notification-icon">
+            <mat-icon [color]="getNotificationColor(notification.notification_type)">
+              {{ getNotificationIcon(notification.notification_type) }}
+            </mat-icon>
+          </div>
+          <div class="notification-content">
+            <strong>{{ notification.title }}</strong>
+            <p>{{ notification.message }}</p>
+            <small>{{ notification.created_at | date:'dd.MM.yyyy HH:mm' }}</small>
+          </div>
+          <button mat-icon-button (click)="deleteNotification(notification.id, $event)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </ng-container>
+      <ng-template #noNotifications>
+        <div class="no-notifications">
+          <mat-icon>notifications_none</mat-icon>
+          <p>Keine Benachrichtigungen</p>
+        </div>
+      </ng-template>
+    </div>
+  </mat-menu>
+  
+  <!-- Abteilungsfilter für Admin/HR -->
+  <mat-form-field *ngIf="currentUser && ['admin', 'hr'].includes(currentUser.role)" class="department-filter">
+    <mat-label>Abteilung</mat-label>
+    <mat-select [(ngModel)]="selectedDepartmentId">
+      <mat-option [value]="'all'">
+        <mat-icon>business</mat-icon>
+        Gesamte Firma
+      </mat-option>
+      <mat-divider></mat-divider>
+      <mat-option *ngFor="let dept of departments" [value]="dept.id">
+        {{ dept.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+  
+  <button mat-button [matMenuTriggerFor]="userMenu">
+    <mat-icon>account_circle</mat-icon>
+    <span class="user-name">{{ currentUser?.full_name || currentUser?.username }}</span>
+  </button>
+  
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item disabled>
+      <mat-icon>badge</mat-icon>
+      <span>{{ getRoleLabel(currentUser?.role) }}</span>
+    </button>
+    <button mat-menu-item disabled *ngIf="authService.isManager && currentTier">
+      <mat-icon>workspace_premium</mat-icon>
+      <span>{{ currentTier }}</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item routerLink="/subscription" *ngIf="authService.isManager">
+      <mat-icon>subscriptions</mat-icon>
+      <span>Abonnement verwalten</span>
+    </button>
+    <button mat-menu-item routerLink="/change-password">
+      <mat-icon>vpn_key</mat-icon>
+      <span>Passwort ändern</span>
+    </button>
+    <button mat-menu-item (click)="toggleDarkMode()">
+      <mat-icon>{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      <span>{{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}</span>
+    </button>
+    <button mat-menu-item (click)="pwaService.showInstallPrompt()" *ngIf="pwaService.canInstall">
+      <mat-icon>install_mobile</mat-icon>
+      <span>App installieren</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Abmelden</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>
+
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav 
+    #sidenav 
+    mode="side" 
+    [opened]="sidenavOpened"
+    class="sidenav">
+    <div class="sidenav-content-wrapper">
+      <mat-nav-list>
+        <ng-container *ngFor="let item of menuItems">
+          <ng-container *ngIf="item.label !== 'Datenschutz' && item.label !== 'Impressum'">
+            <a 
+              mat-list-item 
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+              *ngIf="hasAccess(item.roles)">
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.label }}</span>
+            </a>
+            <mat-divider *ngIf="item.divider && hasAccess(item.roles)" class="menu-divider"></mat-divider>
+          </ng-container>
+        </ng-container>
+      </mat-nav-list>
+      <div class="legal-links">
+        <ng-container *ngFor="let item of menuItems">
+          <ng-container *ngIf="item.label === 'Datenschutz' || item.label === 'Impressum'">
+            <a 
+              mat-list-item 
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+              *ngIf="hasAccess(item.roles)">
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.label }}</span>
+            </a>
+          </ng-container>
+        </ng-container>
+        <div class="copyright">
+          <p>&copy; {{ currentYear }} Bilal Alac</p>
+        </div>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content">
+    <div class="content-wrapper">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

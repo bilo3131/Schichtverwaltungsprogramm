@@ -1,0 +1,30 @@
+@use '../_dialog-styles' as *;
+
+.confirm-dialog {
+  h2 {
+    @include dialog-title;
+  }
+}
+
+mat-dialog-content {
+  min-width: 350px;
+  @include dialog-content;
+  
+  .message {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.87);
+  }
+}
+
+mat-dialog-actions {
+  @include dialog-actions;
+}
+
+// Dark Mode
+:host-context(.dark-theme) {
+  mat-dialog-content .message {
+    color: rgba(255, 255, 255, 0.87);
+  }
+}

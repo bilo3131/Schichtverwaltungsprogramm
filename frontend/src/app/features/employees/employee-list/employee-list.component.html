@@ -1,0 +1,150 @@
+<div class="employee-list">
+  <div class="header">
+    <h1>Personal</h1>
+    <div class="header-actions">
+      <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
+        <mat-icon>info</mat-icon>
+      </button>
+      <button *ngIf="canAddEmployee()" mat-raised-button color="primary" (click)="openDialog()">
+        <mat-icon>add</mat-icon>
+        Neuer Mitarbeiter
+      </button>
+    </div>
+  </div>
+
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Beschäftigungsart</mat-label>
+          <mat-select [(ngModel)]="filters.employmentType" (selectionChange)="loadEmployees()">
+            <mat-option [value]="''">Alle</mat-option>
+            <mat-option value="fulltime">Vollzeit</mat-option>
+            <mat-option value="parttime">Teilzeit</mat-option>
+            <mat-option value="minijob">Minijob</mat-option>
+            <mat-option value="werkstudent">Werkstudent</mat-option>
+            <mat-option value="apprentice">Ausbildung</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select [(ngModel)]="filters.isActive" (selectionChange)="loadEmployees()">
+            <mat-option [value]="''">Alle</mat-option>
+            <mat-option [value]="'true'">Aktiv</mat-option>
+            <mat-option [value]="'false'">Inaktiv</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <mat-card *ngIf="!loading">
+    <mat-card-content>
+      <table mat-table [dataSource]="employees" class="employees-table">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let employee">{{ employee.full_name }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="employment_type">
+          <th mat-header-cell *matHeaderCellDef>Beschäftigungsart</th>
+          <td mat-cell *matCellDef="let employee">
+            {{ getEmploymentTypeLabel(employee.employment_type) }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="hours">
+          <th mat-header-cell *matHeaderCellDef>Wochenstunden</th>
+          <td mat-cell *matCellDef="let employee">
+            {{ employee.min_hours_per_week }} - {{ employee.max_hours_per_week }}h
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Rolle</th>
+          <td mat-cell *matCellDef="let employee">
+            {{ getRoleLabel(employee.user_details?.role || 'employee') }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let employee">
+            <mat-chip [color]="employee.is_active ? 'primary' : ''">
+              {{ employee.is_active ? 'Aktiv' : 'Inaktiv' }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+          <td mat-cell *matCellDef="let employee">
+            <button *ngIf="canEditEmployee(employee)" mat-icon-button (click)="openDialog(employee); $event.stopPropagation()" matTooltip="Bearbeiten">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button *ngIf="canResetPassword()" mat-icon-button (click)="resetEmployeePassword(employee); $event.stopPropagation()" matTooltip="Passwort zurücksetzen">
+              <mat-icon>vpn_key</mat-icon>
+            </button>
+            <button *ngIf="canDeleteEmployee(employee)" mat-icon-button color="warn" (click)="deleteEmployee(employee.id); $event.stopPropagation()" matTooltip="Löschen">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="openDetailDialog(row)"></tr>
+
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+            Keine Mitarbeiter gefunden
+          </td>
+        </tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- Info Box Overlay -->
+<div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+  <mat-card class="info-box" *ngIf="showInfoBox">
+    <mat-card-content>
+      <div class="info-header">
+        <div class="info-title">
+          <mat-icon color="primary">info</mat-icon>
+          <h3>Informationen zur Personalverwaltung</h3>
+        </div>
+        <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="info-content">
+        <div class="info-section">
+          <h4><mat-icon>group</mat-icon> Mitarbeiterübersicht</h4>
+          <p>Hier sehen Sie alle Mitarbeiter Ihrer Organisation. Sie können nach Beschäftigungsart und Status filtern.</p>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>add</mat-icon> Mitarbeiter anlegen</h4>
+          <p>Mit dem Button "Neuer Mitarbeiter" können Sie neue Mitarbeiter hinzufügen. Die Berechtigungen richten sich nach Ihrer Rolle.</p>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>edit</mat-icon> Bearbeiten & Aktionen</h4>
+          <ul>
+            <li><strong>Bearbeiten:</strong> Öffnet den Dialog zur Bearbeitung der Mitarbeiterdaten</li>
+            <li><strong>Passwort zurücksetzen:</strong> Setzt das Passwort des Mitarbeiters zurück</li>
+            <li><strong>Löschen:</strong> Entfernt den Mitarbeiter aus dem System (nur mit entsprechender Berechtigung)</li>
+          </ul>
+        </div>
+        <div class="info-section">
+          <h4><mat-icon>info</mat-icon> Besonderheiten</h4>
+          <ul>
+            <li><strong>Rollen:</strong> Die Rolle eines Mitarbeiters bestimmt die Zugriffsrechte im System</li>
+            <li><strong>Status:</strong> Aktiv/Inaktiv zeigt, ob ein Mitarbeiter aktuell beschäftigt ist</li>
+            <li><strong>Detailansicht:</strong> Ein Klick auf eine Zeile öffnet die Detailansicht</li>
+          </ul>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>

@@ -1,0 +1,23 @@
+SaaS mit Lizenzmodell (sehr verbreitet)
+Du hostest die Anwendung auf deinen Servern
+Kunden zahlen Lizenzgebühren (z.B. pro Mitarbeiter/Monat, Flat-Rate, etc.)
+Kunden greifen über Browser auf deine gehostete Lösung zu
+→ Du bist verantwortlich für die Datenverarbeitung
+→ Deine Firmendaten in Datenschutz & Impressum
+Beispiele: Salesforce, Microsoft 365, Slack
+Datenschutzrechtlich bedeutet das:
+
+Du bist der Verantwortliche nach DSGVO
+Du benötigst Auftragsverarbeitungsverträge (AVV) mit deinen Kunden
+Deine Firmendaten stehen im Impressum und Datenschutz
+Du musst selbst DSGVO-konform arbeiten (Server-Standort, Sicherheit, etc.)
+On-Premises mit Lizenzmodell (Alternative)
+Kunden kaufen/lizenzieren die Software
+Kunden hosten selbst auf eigenen Servern
+→ Kunden sind verantwortlich für die Datenverarbeitung
+→ Kunden tragen ihre eigenen Daten ein
+Für dein Vorhaben (SaaS + Lizenzmodell):
+
+Lass die Platzhalter erstmal so, wie sie sind
+Wenn du produktionsreif bist, trägst du deine Firmendaten überall ein
+Du solltest dich dann auch rechtlich beraten lassen bzgl. AVV-Verträgen und DSGVO-Compliance

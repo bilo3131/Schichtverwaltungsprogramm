@@ -1,0 +1,64 @@
+<h2 mat-dialog-title>{{ data.absence ? 'Abwesenheit bearbeiten' : 'Neue Abwesenheit' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="absenceForm">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mitarbeiter</mat-label>
+      <mat-select formControlName="employee" required>
+        <mat-option *ngFor="let emp of data.employees" [value]="emp.id">
+          {{ emp.full_name }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="absenceForm.get('employee')?.hasError('required')">
+        Bitte wählen Sie einen Mitarbeiter
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Abwesenheitstyp</mat-label>
+      <mat-select formControlName="absence_type" required>
+        <mat-option value="sick">Krank</mat-option>
+        <mat-option value="vacation_wish">Urlaubswunsch (Jahresplanung)</mat-option>
+        <mat-option value="kug">KUG</mat-option>
+        <mat-option value="other">Sonstiges</mat-option>
+      </mat-select>
+      <mat-hint>Für verbindliche Urlaubsanträge bitte die Urlaubsverwaltung nutzen</mat-hint>
+      <mat-error *ngIf="absenceForm.get('absence_type')?.hasError('required')">
+        Bitte wählen Sie einen Typ
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Von</mat-label>
+      <input matInput [matDatepicker]="startPicker" formControlName="start_date" required>
+      <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+      <mat-error *ngIf="absenceForm.get('start_date')?.hasError('required')">
+        Bitte wählen Sie ein Startdatum
+      </mat-error>
+      <mat-error *ngIf="absenceForm.hasError('dateRange') && !absenceForm.get('start_date')?.hasError('required')">
+        Das Startdatum muss vor dem Enddatum liegen
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Bis (optional)</mat-label>
+      <input matInput [matDatepicker]="endPicker" formControlName="end_date">
+      <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+      <mat-datepicker #endPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Notizen</mat-label>
+      <textarea matInput formControlName="notes" rows="3" 
+                placeholder="Optional: Zusätzliche Informationen"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Abbrechen</button>
+  <button mat-raised-button color="primary" 
+          [disabled]="absenceForm.invalid"
+          (click)="onSave()">
+    Speichern
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,156 @@
+<div class="subscription-management">
+  <div class="page-header">
+    <h1>Abonnement-Verwaltung</h1>
+    <p>Verwalten Sie Ihr Abonnement und passen Sie es an Ihre Bedürfnisse an</p>
+  </div>
+
+  <!-- Aktuelle Nutzung -->
+  <app-subscription-status></app-subscription-status>
+
+  <!-- Verfügbare Pläne -->
+  <div class="plans-section" *ngIf="subscription">
+    <h2>Verfügbare Abonnements</h2>
+    <div class="plans-grid">
+      <!-- Starter Plan -->
+      <mat-card class="plan-card" [class.current-plan]="subscription.tier === 'starter'">
+        <mat-card-header>
+          <div class="plan-header">
+            <mat-icon>rocket_launch</mat-icon>
+            <h3>Starter</h3>
+            <mat-chip *ngIf="subscription.tier === 'starter'" color="primary">Aktuell</mat-chip>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="plan-price">
+            <span class="price">29€</span>
+            <span class="period">/Monat</span>
+          </div>
+          <div class="price-detail">+ 1,50€ pro Mitarbeiter</div>
+          
+          <ul class="features-list">
+            <li><mat-icon>check_circle</mat-icon> 1 Abteilung</li>
+            <li><mat-icon>check_circle</mat-icon> Bis zu 20 Mitarbeiter</li>
+            <li><mat-icon>check_circle</mat-icon> Schichtplanung</li>
+            <li><mat-icon>check_circle</mat-icon> Urlaubsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Abwesenheitsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Reporting & Statistiken</li>
+            <li><mat-icon>check_circle</mat-icon> Qualifikationsverwaltung</li>
+          </ul>
+
+          <button 
+            mat-raised-button 
+            [color]="subscription.tier === 'starter' ? 'accent' : 'primary'"
+            [disabled]="subscription.tier === 'starter'"
+            (click)="upgradeTo('starter')"
+            *ngIf="canDowngrade('starter')">
+            Downgrade zu Starter
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            disabled
+            *ngIf="subscription.tier === 'starter'">
+            Aktuelles Abonnement
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Pro Plan -->
+      <mat-card class="plan-card featured" [class.current-plan]="subscription.tier === 'pro'">
+        <div class="recommended-badge" *ngIf="subscription.tier !== 'pro'">Empfohlen</div>
+        <mat-card-header>
+          <div class="plan-header">
+            <mat-icon>star</mat-icon>
+            <h3>Pro</h3>
+            <mat-chip *ngIf="subscription.tier === 'pro'" color="primary">Aktuell</mat-chip>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="plan-price">
+            <span class="price">59€</span>
+            <span class="period">/Monat</span>
+          </div>
+          <div class="price-detail">+ 1,00€ pro Mitarbeiter</div>
+          
+          <ul class="features-list">
+            <li><mat-icon>check_circle</mat-icon> Bis zu 10 Abteilungen</li>
+            <li><mat-icon>check_circle</mat-icon> Bis zu 150 Mitarbeiter</li>
+            <li><mat-icon>check_circle</mat-icon> Schichtplanung</li>
+            <li><mat-icon>check_circle</mat-icon> Urlaubsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Abwesenheitsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Reporting & Statistiken</li>
+            <li><mat-icon>check_circle</mat-icon> Qualifikationsverwaltung</li>
+          </ul>
+
+          <button 
+            mat-raised-button 
+            color="primary"
+            [disabled]="subscription.tier === 'pro'"
+            (click)="upgradeTo('pro')"
+            *ngIf="canUpgrade('pro')">
+            Upgrade zu Pro
+          </button>
+          <button 
+            mat-raised-button 
+            [color]="subscription.tier === 'pro' ? 'accent' : 'primary'"
+            [disabled]="subscription.tier === 'pro'"
+            (click)="upgradeTo('pro')"
+            *ngIf="canDowngrade('pro')">
+            Downgrade zu Pro
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            disabled
+            *ngIf="subscription.tier === 'pro'">
+            Aktuelles Abonnement
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Business Plan -->
+      <mat-card class="plan-card" [class.current-plan]="subscription.tier === 'business'">
+        <mat-card-header>
+          <div class="plan-header">
+            <mat-icon>business_center</mat-icon>
+            <h3>Business</h3>
+            <mat-chip *ngIf="subscription.tier === 'business'" color="primary">Aktuell</mat-chip>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="plan-price">
+            <span class="price">99€</span>
+            <span class="period">/Monat</span>
+          </div>
+          <div class="price-detail">+ 0,80€ pro Mitarbeiter</div>
+          
+          <ul class="features-list">
+            <li><mat-icon>check_circle</mat-icon> Unbegrenzte Abteilungen</li>
+            <li><mat-icon>check_circle</mat-icon> Unbegrenzte Mitarbeiter</li>
+            <li><mat-icon>check_circle</mat-icon> Schichtplanung</li>
+            <li><mat-icon>check_circle</mat-icon> Urlaubsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Abwesenheitsverwaltung</li>
+            <li><mat-icon>check_circle</mat-icon> Reporting & Statistiken</li>
+            <li><mat-icon>check_circle</mat-icon> Qualifikationsverwaltung</li>
+          </ul>
+
+          <button 
+            mat-raised-button 
+            color="primary"
+            [disabled]="subscription.tier === 'business'"
+            (click)="upgradeTo('business')"
+            *ngIf="canUpgrade('business')">
+            Upgrade zu Business
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            disabled
+            *ngIf="subscription.tier === 'business'">
+            Aktuelles Abonnement
+          </button>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

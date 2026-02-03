@@ -1,0 +1,89 @@
+<div class="absence-calendar-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon [color]="getAbsenceTypeColor(data.absence.absence_type)">
+      {{ getAbsenceTypeIcon(data.absence.absence_type) }}
+    </mat-icon>
+    Abwesenheit: {{ getAbsenceTypeLabel(data.absence.absence_type) }}
+  </h2>
+  
+  <mat-dialog-content>
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <mat-icon>person</mat-icon>
+            <div>
+              <label>Mitarbeiter</label>
+              <span>{{ data.absence.employee_name }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>category</mat-icon>
+            <div>
+              <label>Art</label>
+              <span>{{ getAbsenceTypeLabel(data.absence.absence_type) }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>date_range</mat-icon>
+            <div>
+              <label>Zeitraum</label>
+              <span>{{ data.absence.start_date | date:'dd.MM.yyyy' }} - {{ data.absence.end_date | date:'dd.MM.yyyy' }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>event</mat-icon>
+            <div>
+              <label>Dauer</label>
+              <span>{{ workDays }} Arbeitstag{{ workDays !== 1 ? 'e' : '' }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item full-width" *ngIf="data.absence.notes">
+            <mat-icon>notes</mat-icon>
+            <div>
+              <label>Notizen</label>
+              <span>{{ data.absence.notes }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="calendar-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>calendar_month</mat-icon>
+          Abwesenheitskalender
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-calendar 
+          [startAt]="startAt"
+          [dateClass]="dateClass">
+        </mat-calendar>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-color absence-day" [style.background-color]="getAbsenceColor(data.absence.absence_type)"></span>
+        <span>Abwesenheitstag</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color weekend"></span>
+        <span>Wochenende (nicht gezählt)</span>
+      </div>
+    </div>
+  </mat-dialog-content>
+  
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="primary" (click)="onClose()">
+      <mat-icon>close</mat-icon>
+      Schließen
+    </button>
+  </mat-dialog-actions>
+</div>
