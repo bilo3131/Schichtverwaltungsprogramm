@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -117,7 +117,8 @@ class LoginView(generics.GenericAPIView):
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
-            login(request, user)
+            # WICHTIG: Kein login() call - nur Token für API!
+            # login(request, user)  # <- ENTFERNT
             token, created = Token.objects.get_or_create(user=user)
             
             return Response({
@@ -138,14 +139,15 @@ class LogoutView(generics.GenericAPIView):
     
     def post(self, request):
         try:
-            # Lösche Token
+            # Lösche nur Token - keine Session
             request.user.auth_token.delete()
-        except:
-            pass
-        
-        logout(request)
-        return Response(
-            {'message': 'Logout erfolgreich.'},
-            status=status.HTTP_200_OK
-        )
+            return Response(
+                {'message': 'Logout erfolgreich.'},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {'message': 'Logout erfolgreich.'},
+                status=status.HTTP_200_OK
+            )
 
