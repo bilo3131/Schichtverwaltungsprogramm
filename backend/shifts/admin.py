@@ -21,11 +21,17 @@ class QualificationAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ['user', 'department', 'employment_type', 'is_active', 'hire_date']
-    list_filter = ['department', 'employment_type', 'is_active']
+    list_display = ['user', 'get_organization', 'department', 'employment_type', 'is_active', 'hire_date']
+    list_filter = ['user__organization', 'department', 'employment_type', 'is_active']
     search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
     filter_horizontal = ['qualifications']
     ordering = ['user__username']
+    
+    def get_organization(self, obj):
+        """Zeigt die Organisation des Mitarbeiters (über User)"""
+        return obj.user.organization if obj.user.organization else '-'
+    get_organization.short_description = 'Organization'
+    get_organization.admin_order_field = 'user__organization'
 
 @admin.register(Availability)
 class AvailabilityAdmin(admin.ModelAdmin):

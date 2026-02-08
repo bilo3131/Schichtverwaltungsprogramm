@@ -1,7 +1,7 @@
 asgiref==3.9.1
 distlib==0.3.9
 Django==5.2.4
-djangostframework==3.16.0
+djangorestframework==3.16.0
 django-cors-headers
 psycopg2-binary
 gunicorn

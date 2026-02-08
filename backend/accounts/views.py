@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.db.models import Q
@@ -15,17 +15,14 @@ from .serializers import (
 
 
 class OrganizationViewSet(viewsets.ModelViewSet):
-    """ViewSet für Organisationen"""
+    """ViewSet für Organisationen - NUR für Django-Admins (is_staff=True)"""
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]  # Nur Django Admin Panel Admin (is_staff=True)
     
     def get_queryset(self):
-        user = self.request.user
-        # Admin kann alle sehen, andere nur ihre eigene Organisation
-        if user.role == 'admin':
-            return Organization.objects.all()
-        return Organization.objects.filter(id=user.organization_id)
+        # Nur für Django-Admins zugänglich
+        return Organization.objects.all()
 
 
 class UserViewSet(viewsets.ModelViewSet):

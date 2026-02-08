@@ -1,0 +1,6 @@
+﻿# Shell-Skripte müssen LF verwenden (Linux)
+*.sh text eol=lf
+
+# Windows-Skripte dürfen CRLF verwenden
+*.bat text eol=crlf
+*.ps1 text eol=crlf

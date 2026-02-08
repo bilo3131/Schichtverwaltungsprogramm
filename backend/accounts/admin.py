@@ -28,15 +28,17 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['username', 'email', 'first_name', 'last_name', 'role', 'is_staff', 'is_active']
-    list_filter = ['role', 'is_staff', 'is_active', 'is_superuser']
+    list_display = ['username', 'email', 'first_name', 'last_name', 'organization', 'role', 'is_staff', 'is_active']
+    list_filter = ['role', 'organization', 'is_staff', 'is_active', 'is_superuser']
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering = ['username']
     
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
-        ('Role', {'fields': ('role',)}),
+        ('Organization & Role', {'fields': ('organization', 'role')}),
+        ('Tutorial', {'fields': ('tutorial_completed',)}),
+        ('Preferences', {'fields': ('theme_preference',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -44,7 +46,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'role', 'is_staff', 'is_active')}
+            'fields': ('username', 'email', 'password1', 'password2', 'organization', 'role', 'is_staff', 'is_active')}
         ),
     )
 

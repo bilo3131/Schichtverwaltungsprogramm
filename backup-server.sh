@@ -16,7 +16,7 @@ DB_NAME="schichtplan"
 DB_USER="schichtplan_user"
 BACKUP_DIR="/var/backups/schichtplan"
 PROJECT_DIR="/var/www/schichtplan"
-RETENTION_DAYS=7  # Backups älter als X Tage werden gelöscht
+RETENTION_DAYS=30  # Backups älter als X Tage werden gelöscht
 
 # Timestamp
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
