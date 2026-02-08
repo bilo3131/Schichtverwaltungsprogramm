@@ -79,6 +79,11 @@ export class SubscriptionManagementComponent implements OnInit {
   canUpgrade(targetTier: 'starter' | 'pro' | 'business'): boolean {
     if (!this.subscription) return false;
     
+    // Pro und Business sind derzeit nicht verfügbar
+    if (targetTier === 'pro' || targetTier === 'business') {
+      return false;
+    }
+    
     const tierOrder = { starter: 1, pro: 2, business: 3 };
     return tierOrder[targetTier] > tierOrder[this.subscription.tier];
   }
@@ -88,5 +93,10 @@ export class SubscriptionManagementComponent implements OnInit {
     
     const tierOrder = { starter: 1, pro: 2, business: 3 };
     return tierOrder[targetTier] < tierOrder[this.subscription.tier];
+  }
+
+  isTierDisabled(tier: 'starter' | 'pro' | 'business'): boolean {
+    // Pro und Business sind derzeit deaktiviert
+    return tier === 'pro' || tier === 'business';
   }
 }

@@ -1,0 +1,191 @@
+.tutorial-dialog {
+  width: 600px;
+  max-width: 90vw;
+}
+
+.tutorial-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+
+  .welcome-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: #4caf50;
+  }
+
+  h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .close-button {
+    margin: 0;
+  }
+}
+
+mat-dialog-content {
+  padding: 0;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.tutorial-progress {
+  padding: 1.5rem 1.5rem 0.5rem;
+  
+  mat-progress-bar {
+    margin-bottom: 0.5rem;
+  }
+
+  .step-counter {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 500;
+  }
+}
+
+.tutorial-content {
+  padding: 1.5rem;
+  text-align: center;
+
+  .step-icon {
+    margin-bottom: 1rem;
+
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+    }
+  }
+
+  h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .step-description {
+    margin-bottom: 1.5rem;
+    text-align: left;
+    line-height: 1.6;
+    color: rgba(0, 0, 0, 0.87);
+
+    p {
+      margin: 0.5rem 0;
+      white-space: pre-line;
+    }
+  }
+
+  .sidenav-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    border-radius: 4px;
+    text-align: left;
+
+    mat-icon {
+      color: #4caf50;
+      flex-shrink: 0;
+    }
+
+    span {
+      color: #2e7d32;
+      font-size: 0.95rem;
+      line-height: 1.5;
+
+      strong {
+        font-weight: 600;
+        color: #1b5e20;
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 0;
+
+  .actions-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+
+    .skip-button {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .navigation-buttons {
+      display: flex;
+      gap: 0.5rem;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+    }
+  }
+}
+
+// Dark Mode
+:host-context(.dark-theme) {
+  .tutorial-header {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+
+    h2 {
+      color: #ffffff;
+    }
+  }
+
+  .tutorial-progress {
+    .step-counter {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  .tutorial-content {
+    h3 {
+      color: #ffffff;
+    }
+
+    .step-description {
+      color: rgba(255, 255, 255, 0.87);
+    }
+
+    .sidenav-hint {
+      background: rgba(52, 168, 83, 0.2);
+      border-left-color: #66bb6a;
+
+      mat-icon {
+        color: #66bb6a;
+      }
+
+      span {
+        color: rgba(255, 255, 255, 0.87);
+
+        strong {
+          color: #81c784;
+        }
+      }
+    }
+  }
+
+  mat-dialog-actions {
+    border-top-color: rgba(255, 255, 255, 0.12);
+
+    .skip-button {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+}

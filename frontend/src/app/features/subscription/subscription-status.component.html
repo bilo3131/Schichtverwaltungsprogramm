@@ -73,21 +73,33 @@
           <h3>Aktuelle Kosten</h3>
         </div>
         <div class="pricing-content">
+          <div class="trial-notice" *ngIf="limits.pricing.is_trial">
+            <mat-icon>info</mat-icon>
+            <span><strong>Testversion:</strong> Aktuell nutzen Sie das Starter-Paket kostenlos. Der reguläre Preis beträgt {{ limits.pricing.original_base_price | number:'1.2-2' }} € + {{ limits.pricing.original_price_per_employee | number:'1.2-2' }} € pro Mitarbeiter.</span>
+          </div>
           <div class="price-breakdown">
             <div class="price-item">
               <span class="label">Grundpreis:</span>
-              <span class="value">{{ limits.pricing.base_price | number:'1.2-2' }} €</span>
+              <span class="value" [class.free-text]="limits.pricing.is_trial">
+                <span *ngIf="limits.pricing.is_trial" class="strikethrough">{{ limits.pricing.original_base_price | number:'1.2-2' }} €</span>
+                <span *ngIf="!limits.pricing.is_trial">{{ limits.pricing.base_price | number:'1.2-2' }} €</span>
+                <span *ngIf="limits.pricing.is_trial" class="free-badge">KOSTENLOS</span>
+              </span>
             </div>
             <div class="price-item">
               <span class="label">Pro Mitarbeiter:</span>
-              <span class="value">{{ limits.pricing.price_per_employee | number:'1.2-2' }} €</span>
+              <span class="value" [class.free-text]="limits.pricing.is_trial">
+                <span *ngIf="limits.pricing.is_trial" class="strikethrough">{{ limits.pricing.original_price_per_employee | number:'1.2-2' }} €</span>
+                <span *ngIf="!limits.pricing.is_trial">{{ limits.pricing.price_per_employee | number:'1.2-2' }} €</span>
+                <span *ngIf="limits.pricing.is_trial" class="free-badge">KOSTENLOS</span>
+              </span>
             </div>
             <div class="price-item">
               <span class="label">Mitarbeiter ({{ limits.employees.current }}):</span>
               <span class="value">{{ (limits.employees.current * limits.pricing.price_per_employee) | number:'1.2-2' }} €</span>
             </div>
           </div>
-          <div class="total-price">
+          <div class="total-price" [class.free-total]="limits.pricing.is_trial">
             <span class="label">Gesamt pro Monat:</span>
             <span class="value">{{ limits.pricing.monthly_cost | number:'1.2-2' }} €</span>
           </div>

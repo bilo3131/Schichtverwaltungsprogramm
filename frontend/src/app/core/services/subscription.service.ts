@@ -23,6 +23,9 @@ export interface SubscriptionLimits {
     base_price: number;
     price_per_employee: number;
     monthly_cost: number;
+    original_base_price?: number;
+    original_price_per_employee?: number;
+    is_trial?: boolean;
   };
   status: {
     is_active: boolean;
@@ -125,8 +128,11 @@ export class SubscriptionService {
         name: 'Starter',
         maxDepartments: 1,
         maxEmployees: 20,
-        basePrice: 29,
-        pricePerEmployee: 1.50,
+        basePrice: 0,
+        pricePerEmployee: 0,
+        originalBasePrice: 29,
+        originalPricePerEmployee: 1.50,
+        isTrial: true,
         features: [
           '1 Abteilung',
           'Bis zu 20 Mitarbeiter',
@@ -141,6 +147,8 @@ export class SubscriptionService {
         maxEmployees: 150,
         basePrice: 59,
         pricePerEmployee: 1.00,
+        disabled: true,
+        comingSoon: true,
         features: [
           'Bis zu 10 Abteilungen',
           'Bis zu 150 Mitarbeiter',
@@ -157,6 +165,8 @@ export class SubscriptionService {
         maxEmployees: -1,
         basePrice: 99,
         pricePerEmployee: 0.80,
+        disabled: true,
+        comingSoon: true,
         features: [
           'Unbegrenzte Abteilungen',
           'Unbegrenzte Mitarbeiter',

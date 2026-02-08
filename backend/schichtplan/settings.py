@@ -11,6 +11,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv nicht installiert (Development)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -172,15 +180,20 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email Configuration
-# Für Entwicklung: Console Backend (Emails werden in der Konsole ausgegeben)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# Für Produktion würden Sie einen echten Email-Service konfigurieren:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'ihre-email@example.com'
-# EMAIL_HOST_PASSWORD = 'ihr-passwort'
-
-DEFAULT_FROM_EMAIL = 'noreply@schichtplan.local'
+# Verwendet .env Datei für Production, Console Backend für Development
+if os.environ.get('EMAIL_HOST'):
+    # Production: SMTP Email Backend
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'mail.your-server.de')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@bilal-alac.de')
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    EMAIL_TIMEOUT = 30
+else:
+    # Development: Console Backend (Emails werden in der Konsole ausgegeben)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@schichtplan.local'

@@ -18,9 +18,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         # Admins können alle Subscriptions sehen
         if user.role == 'admin':
             return Subscription.objects.all()
-        # Andere sehen nur ihre eigene Subscription
-        if hasattr(user, 'subscription'):
-            return Subscription.objects.filter(id=user.subscription.id)
+        # Andere sehen nur die Subscription ihrer Organization
+        if user.organization and user.organization.subscription:
+            return Subscription.objects.filter(id=user.organization.subscription.id)
         return Subscription.objects.none()
     
     @action(detail=False, methods=['get'])
@@ -29,17 +29,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         user = request.user
         subscription = None
         
-        # Zuerst prüfen ob User selbst eine Subscription hat (ist Owner/Admin)
-        if hasattr(user, 'subscription'):
-            subscription = user.subscription
-        # Ansonsten über Organization die Subscription finden
-        elif user.organization:
-            # Finde den Owner/Admin der Organization
-            owner = user.organization.users.filter(
-                subscription__isnull=False
-            ).first()
-            if owner and hasattr(owner, 'subscription'):
-                subscription = owner.subscription
+        # Subscription über Organization abrufen
+        if user.organization and user.organization.subscription:
+            subscription = user.organization.subscription
         
         if subscription:
             serializer = self.get_serializer(subscription)
@@ -56,17 +48,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         user = request.user
         subscription = None
         
-        # Zuerst prüfen ob User selbst eine Subscription hat (ist Owner/Admin)
-        if hasattr(user, 'subscription'):
-            subscription = user.subscription
-        # Ansonsten über Organization die Subscription finden
-        elif user.organization:
-            # Finde den Owner/Admin der Organization
-            owner = user.organization.users.filter(
-                subscription__isnull=False
-            ).first()
-            if owner and hasattr(owner, 'subscription'):
-                subscription = owner.subscription
+        # Subscription über Organization abrufen
+        if user.organization and user.organization.subscription:
+            subscription = user.organization.subscription
         
         if subscription:
             return Response(subscription.get_limits_info())

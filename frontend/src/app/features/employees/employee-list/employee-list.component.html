@@ -49,6 +49,14 @@
           <td mat-cell *matCellDef="let employee">{{ employee.full_name }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="department">
+          <th mat-header-cell *matHeaderCellDef>Abteilung</th>
+          <td mat-cell *matCellDef="let employee">
+            <span *ngIf="employee.department_details">{{ employee.department_details.name }}</span>
+            <span *ngIf="!employee.department_details" class="no-department">Keine Abteilung</span>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="employment_type">
           <th mat-header-cell *matHeaderCellDef>Beschäftigungsart</th>
           <td mat-cell *matCellDef="let employee">

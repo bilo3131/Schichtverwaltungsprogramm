@@ -1,0 +1,60 @@
+<div class="tutorial-dialog">
+  <div class="tutorial-header">
+    <mat-icon class="welcome-icon">school</mat-icon>
+    <h2 mat-dialog-title>Willkommen zur Schichtplan-App!</h2>
+    <button mat-icon-button class="close-button" (click)="skipTutorial()" matTooltip="Tutorial überspringen">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="tutorial-progress">
+      <mat-progress-bar mode="determinate" [value]="progress" color="primary"></mat-progress-bar>
+      <span class="step-counter">Schritt {{ currentStepIndex + 1 }} von {{ steps.length }}</span>
+    </div>
+
+    <div class="tutorial-content" @slideAnimation>
+      <div class="step-icon">
+        <mat-icon color="primary">{{ currentStep.icon }}</mat-icon>
+      </div>
+      
+      <h3>{{ currentStep.title }}</h3>
+      
+      <div class="step-description">
+        <p *ngFor="let line of currentStep.description.split('\n')">
+          {{ line }}
+        </p>
+      </div>
+
+      <div class="sidenav-hint" *ngIf="currentStep.sidenavItem">
+        <mat-icon>arrow_forward</mat-icon>
+        <span>Diese Funktion finden Sie in der Navigation unter: <strong>{{ currentStep.sidenavItem }}</strong></span>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <div class="actions-container">
+      <button mat-button (click)="skipTutorial()" class="skip-button">
+        Tutorial überspringen
+      </button>
+      
+      <div class="navigation-buttons">
+        <button mat-button (click)="previousStep()" [disabled]="isFirstStep">
+          <mat-icon>chevron_left</mat-icon>
+          Zurück
+        </button>
+        
+        <button mat-raised-button color="primary" (click)="nextStep()" *ngIf="!isLastStep">
+          Weiter
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        
+        <button mat-raised-button color="primary" (click)="completeTutorial()" *ngIf="isLastStep">
+          <mat-icon>check</mat-icon>
+          Tutorial abschließen
+        </button>
+      </div>
+    </div>
+  </mat-dialog-actions>
+</div>

@@ -6,26 +6,17 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class Organization(models.Model):
     """Mandant/Unternehmen für Multi-Tenancy"""
     
-    # Subscription Plan Choices
-    LOW = 'low'
-    MID = 'mid'
-    HIGH = 'high'
-    
-    SUBSCRIPTION_CHOICES = [
-        (LOW, 'Low Budget - Basis'),
-        (MID, 'Mid Budget - Standard'),
-        (HIGH, 'High Budget - Premium'),
-    ]
-    
     name = models.CharField(max_length=255, verbose_name="Unternehmensname")
     address = models.TextField(blank=True, verbose_name="Adresse")
     phone = models.CharField(max_length=50, blank=True, verbose_name="Telefon")
     email = models.EmailField(blank=True, verbose_name="E-Mail")
-    subscription_plan = models.CharField(
-        max_length=10,
-        choices=SUBSCRIPTION_CHOICES,
-        default=LOW,
-        verbose_name="Abonnement-Plan"
+    subscription = models.ForeignKey(
+        'subscriptions.Subscription',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='organizations',
+        verbose_name="Subscription"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -83,6 +74,10 @@ class User(AbstractUser):
         choices=THEME_CHOICES,
         default='light',
         verbose_name="Theme Präferenz"
+    )
+    tutorial_completed = models.BooleanField(
+        default=False,
+        verbose_name="Tutorial abgeschlossen"
     )
     
     class Meta:

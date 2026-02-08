@@ -67,7 +67,7 @@ export class EmployeeListComponent implements OnInit {
 
   employees: Employee[] = [];
   loading = false;
-  displayedColumns = ['name', 'employment_type', 'hours', 'role', 'status', 'actions'];
+  displayedColumns = ['name', 'department', 'employment_type', 'hours', 'role', 'status', 'actions'];
   
   filters = {
     employmentType: '',

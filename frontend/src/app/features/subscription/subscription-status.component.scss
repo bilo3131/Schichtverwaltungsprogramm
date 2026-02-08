@@ -112,6 +112,32 @@
 
       .pricing-section {
         .pricing-content {
+          .trial-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #e8f5e9;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #4caf50;
+
+            mat-icon {
+              color: #4caf50;
+              margin-top: 2px;
+            }
+
+            span {
+              font-size: 0.9rem;
+              color: #2e7d32;
+              line-height: 1.5;
+
+              strong {
+                font-weight: 600;
+              }
+            }
+          }
+
           .price-breakdown {
             .price-item {
               display: flex;
@@ -126,6 +152,26 @@
               .value {
                 font-weight: 500;
                 color: #333;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+
+                &.free-text {
+                  flex-direction: column;
+                  align-items: flex-end;
+                }
+
+                .strikethrough {
+                  text-decoration: line-through;
+                  opacity: 0.5;
+                  font-size: 0.85em;
+                }
+
+                .free-badge {
+                  color: #4caf50;
+                  font-weight: 700;
+                  font-size: 0.9em;
+                }
               }
             }
           }
@@ -146,6 +192,14 @@
             .value {
               font-weight: 700;
               color: #1976d2;
+            }
+
+            &.free-total {
+              border-top-color: #4caf50;
+
+              .value {
+                color: #4caf50;
+              }
             }
           }
         }
@@ -239,6 +293,23 @@
       
       .pricing-section {
         .pricing-content {
+          .trial-notice {
+            background: rgba(52, 168, 83, 0.2);
+            border-left-color: #66bb6a;
+
+            mat-icon {
+              color: #66bb6a;
+            }
+
+            span {
+              color: rgba(255, 255, 255, 0.87);
+
+              strong {
+                color: #81c784;
+              }
+            }
+          }
+
           .price-breakdown {
             .price-item {
               border-bottom-color: rgba(255, 255, 255, 0.12);

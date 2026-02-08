@@ -11,7 +11,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'calculate_monthly_cost', 'subscription_end_date'
     ]
     list_filter = ['tier', 'is_active', 'subscription_start_date']
-    search_fields = ['company_name', 'owner__username', 'owner__email']
+    search_fields = ['company_name']
     readonly_fields = [
         'max_departments', 'max_employees',
         'base_price', 'price_per_employee',
@@ -22,7 +22,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Unternehmen', {
-            'fields': ('company_name', 'owner')
+            'fields': ('company_name',)
         }),
         ('Lizenz', {
             'fields': ('tier', 'is_active')

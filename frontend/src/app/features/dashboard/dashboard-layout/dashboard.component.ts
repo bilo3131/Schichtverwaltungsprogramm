@@ -10,6 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -19,6 +20,8 @@ import { PwaService } from '../../../core/services/pwa.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { InactivityService } from '../../../core/services/inactivity.service';
+import { TutorialService } from '../../../core/services/tutorial.service';
+import { TutorialDialogComponent } from '../../../shared/dialogs/tutorial-dialog/tutorial-dialog.component';
 import type { User, Department, Notification } from '../../../core/models';
 
 interface MenuItem {
@@ -150,7 +153,9 @@ export class DashboardComponent implements OnInit {
     public pwaService: PwaService,
     private notificationService: NotificationService,
     private subscriptionService: SubscriptionService,
-    private inactivityService: InactivityService
+    private inactivityService: InactivityService,
+    private tutorialService: TutorialService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -161,6 +166,11 @@ export class DashboardComponent implements OnInit {
     
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      
+      // Prüfe, ob Tutorial angezeigt werden soll
+      if (user && !user.tutorial_completed) {
+        this.showTutorial(user.role);
+      }
       
       // Lade Abteilungen für Admin/HR/Department Manager
       if (user && ['admin', 'hr', 'department_manager'].includes(user.role)) {
@@ -182,6 +192,40 @@ export class DashboardComponent implements OnInit {
     this.themeService.darkMode$.subscribe(isDark => {
       this.isDarkMode = isDark;
     });
+  }
+
+  showTutorial(role: string): void {
+    // Kleiner Delay, damit der User die UI kurz sieht
+    setTimeout(() => {
+      const dialogRef = this.dialog.open(TutorialDialogComponent, {
+        data: { role },
+        width: '650px',
+        maxWidth: '95vw',
+        disableClose: false,
+        panelClass: 'tutorial-dialog-container'
+      });
+
+      dialogRef.afterClosed().subscribe((result) => {
+        // Tutorial wurde abgeschlossen oder übersprungen
+        if (result?.shouldRefreshUser) {
+          // Lade aktuelle User-Daten neu, damit tutorial_completed aktualisiert wird
+          this.authService.getCurrentUser().subscribe();
+        }
+      });
+    }, 500);
+  }
+
+  restartTutorial(): void {
+    if (this.currentUser) {
+      this.dialog.open(TutorialDialogComponent, {
+        data: { role: this.currentUser.role },
+        width: '650px',
+        maxWidth: '95vw',
+        disableClose: false,
+        panelClass: 'tutorial-dialog-container'
+      });
+      // Kein User-Refresh nötig beim manuellen Neustart
+    }
   }
 
   loadSubscriptionInfo(): void {

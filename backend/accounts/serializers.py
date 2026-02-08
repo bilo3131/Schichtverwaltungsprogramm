@@ -5,17 +5,20 @@ from .models import Organization, User
 
 class OrganizationSerializer(serializers.ModelSerializer):
     """Serializer für Organisation"""
+    subscription_name = serializers.CharField(source='subscription.company_name', read_only=True)
+    subscription_tier = serializers.CharField(source='subscription.tier', read_only=True)
     
     class Meta:
         model = Organization
-        fields = ['id', 'name', 'address', 'phone', 'email', 'subscription_plan', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'address', 'phone', 'email', 'subscription', 'subscription_name', 'subscription_tier', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'subscription_name', 'subscription_tier']
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer für User (Lesen)"""
     organization_name = serializers.CharField(source='organization.name', read_only=True)
-    subscription_plan = serializers.CharField(source='organization.subscription_plan', read_only=True)
+    subscription_name = serializers.CharField(source='organization.subscription.company_name', read_only=True)
+    subscription_tier = serializers.CharField(source='organization.subscription.tier', read_only=True)
     full_name = serializers.SerializerMethodField()
     employee_profile = serializers.SerializerMethodField()
     
@@ -24,8 +27,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 
             'full_name', 'role', 'phone', 'employee_id', 'employee_profile',
-            'organization', 'organization_name', 'subscription_plan', 'is_active', 
-            'date_joined', 'last_login', 'theme_preference'
+            'organization', 'organization_name', 'subscription_name', 'subscription_tier', 'is_active', 
+            'date_joined', 'last_login', 'theme_preference', 'tutorial_completed'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login']
     

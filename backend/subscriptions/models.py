@@ -96,12 +96,18 @@ class Subscription(models.Model):
     
     def calculate_monthly_cost(self):
         """Berechnet die monatlichen Kosten basierend auf aktueller Mitarbeiteranzahl"""
+        # Starter ist kostenlos während der Trial-Phase
+        if self.tier == SubscriptionTier.STARTER:
+            return 0.00
         employee_count = self.get_current_employee_count()
         total = float(self.base_price) + (employee_count * float(self.price_per_employee))
         return round(total, 2)
     
     def get_limits_info(self):
         """Gibt Informationen über aktuelle Nutzung und Limits zurück"""
+        # Für Trial-Modus: Starter ist kostenlos (0€), Pro und Business sind disabled
+        is_trial_mode = self.tier == SubscriptionTier.STARTER
+        
         return {
             'tier': self.tier,
             'tier_display': self.get_tier_display(),
@@ -118,9 +124,12 @@ class Subscription(models.Model):
                 'can_add': self.can_add_employee()
             },
             'pricing': {
-                'base_price': float(self.base_price),
-                'price_per_employee': float(self.price_per_employee),
-                'monthly_cost': self.calculate_monthly_cost()
+                'base_price': 0.00 if is_trial_mode else float(self.base_price),
+                'price_per_employee': 0.00 if is_trial_mode else float(self.price_per_employee),
+                'monthly_cost': self.calculate_monthly_cost(),
+                'original_base_price': float(self.base_price),
+                'original_price_per_employee': float(self.price_per_employee),
+                'is_trial': is_trial_mode
             },
             'status': {
                 'is_active': self.is_active,

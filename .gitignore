@@ -17,6 +17,10 @@ backend/local_settings.py
 backend/.env
 backend/.env.*
 
+# Production Settings (NIEMALS committen!)
+backend/schichtplan/settings_production.py
+backend/schichtplan/settings_prod.py
+
 # Angular / Frontend
 frontend/node_modules/
 frontend/dist/

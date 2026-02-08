@@ -78,6 +78,18 @@ class UserViewSet(viewsets.ModelViewSet):
             )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def complete_tutorial(self, request):
+        """Markiert das Tutorial als abgeschlossen"""
+        user = request.user
+        user.tutorial_completed = True
+        user.save()
+        
+        return Response(
+            {'message': 'Tutorial als abgeschlossen markiert.'},
+            status=status.HTTP_200_OK
+        )
 
 
 class RegisterView(generics.CreateAPIView):

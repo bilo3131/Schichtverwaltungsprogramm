@@ -32,6 +32,7 @@ export interface User {
   date_joined: string;
   last_login?: string;
   theme_preference?: 'light' | 'dark';
+  tutorial_completed?: boolean;
 }
 
 export interface LoginRequest {

@@ -35,6 +35,12 @@
       background-color: rgba(0, 0, 0, 0.04);
       cursor: pointer;
     }
+
+    .no-department {
+      color: rgba(0, 0, 0, 0.4);
+      font-style: italic;
+      font-size: 0.9em;
+    }
   }
 }
 
@@ -175,6 +181,10 @@
   .employees-table {
     .mat-mdc-row:hover {
       background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .no-department {
+      color: rgba(255, 255, 255, 0.4);
     }
   }
 }

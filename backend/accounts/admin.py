@@ -1,6 +1,30 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from .models import User, Organization
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'subscription', 'is_active', 'created_at']
+    list_filter = ['is_active', 'subscription']
+    search_fields = ['name', 'email', 'phone']
+    ordering = ['name']
+    
+    fieldsets = (
+        ('Unternehmensdaten', {
+            'fields': ('name', 'address', 'phone', 'email')
+        }),
+        ('Subscription', {
+            'fields': ('subscription', 'is_active')
+        }),
+        ('Zeitstempel', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):

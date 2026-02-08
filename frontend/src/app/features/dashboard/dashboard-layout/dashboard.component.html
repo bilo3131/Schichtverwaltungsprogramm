@@ -88,6 +88,10 @@
       <mat-icon>vpn_key</mat-icon>
       <span>Passwort ändern</span>
     </button>
+    <button mat-menu-item (click)="restartTutorial()">
+      <mat-icon>school</mat-icon>
+      <span>Tutorial erneut starten</span>
+    </button>
     <button mat-menu-item (click)="toggleDarkMode()">
       <mat-icon>{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</mat-icon>
       <span>{{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}</span>
