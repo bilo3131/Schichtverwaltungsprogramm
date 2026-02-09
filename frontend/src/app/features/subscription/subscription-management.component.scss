@@ -41,10 +41,18 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s;
+  transition: all 0.3s ease;
+  margin-top: 16px;
+  overflow: visible;
   
-  &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  &:hover:not(.disabled-plan) {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+  }
+  
+  &.disabled-plan:hover {
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.4);
   }
   
   &.featured {
@@ -72,25 +80,51 @@
   }
 
   &.disabled-plan {
-    opacity: 0.6;
-    pointer-events: none;
     position: relative;
+    background: linear-gradient(135deg, rgba(158, 158, 158, 0.05) 0%, rgba(158, 158, 158, 0.1) 100%);
+    border: 2px dashed rgba(158, 158, 158, 0.3);
     
-    &::after {
+    &::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: inherit;
+      background: 
+        linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%),
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 10px,
+          rgba(158, 158, 158, 0.02) 10px,
+          rgba(158, 158, 158, 0.02) 20px
+        );
       pointer-events: none;
+      z-index: 0;
+    }
+    
+    mat-card-header,
+    mat-card-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .plan-header mat-icon,
+    .features-list li mat-icon {
+      opacity: 0.5;
+      filter: grayscale(0.5);
+    }
+    
+    .plan-price .price {
+      opacity: 0.7;
     }
   }
 
   &.trial-plan {
     border: 2px solid #4caf50;
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.3);
+    animation: pulse-border 2s ease-in-out infinite;
     
     .plan-header mat-icon {
       color: #4caf50;
@@ -98,44 +132,85 @@
   }
 }
 
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+  }
+}
+
 .recommended-badge {
   position: absolute;
-  top: -12px;
-  right: 16px;
-  background: #ffd700;
+  top: -10px;
+  right: 12px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   color: #000;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
-  z-index: 1;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  
+  &::before {
+    content: '⭐ ';
+  }
 }
 
 .trial-badge {
   position: absolute;
-  top: -12px;
-  right: 16px;
-  background: #4caf50;
+  top: -10px;
+  right: 12px;
+  background: linear-gradient(135deg, #4caf50 0%, #45a047 100%);
   color: #fff;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
-  z-index: 1;
+  z-index: 2;
   text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  letter-spacing: 0.5px;
+  animation: pulse 2s ease-in-out infinite;
+  white-space: nowrap;
+  
+  &::before {
+    content: '✨ ';
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.6);
+  }
 }
 
 .coming-soon-badge {
   position: absolute;
-  top: -12px;
-  right: 16px;
-  background: #9e9e9e;
+  top: -10px;
+  right: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
-  z-index: 1;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  
+  &::before {
+    content: '🚀 ';
+  }
 }
 
 .plan-header {
@@ -166,6 +241,7 @@
 
 .trial-price {
   margin: 0;
+  padding-top: 32px;
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -253,6 +329,14 @@
 .price-section {
   min-height: 160px;
   margin-bottom: 16px;
+  
+  .disabled-plan & {
+    position: relative;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    border-radius: 8px;
+    border-left: 3px solid rgba(102, 126, 234, 0.4);
+  }
 }
 
 .price-detail {
@@ -286,6 +370,17 @@
 button {
   width: 100%;
   margin-top: auto;
+  
+  .plan-card.disabled-plan & {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: rgba(102, 126, 234, 0.8);
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    font-weight: 500;
+    
+    &::before {
+      content: '🔔 ';
+    }
+  }
 }
 
 // Dark mode
@@ -308,12 +403,23 @@ button {
     background: #424242;
     color: white;
     
-    &:hover {
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    &:hover:not(.disabled-plan) {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transform: translateY(-4px);
     }
     
     &.featured {
       border-color: #64b5f6;
+    }
+    
+    &.disabled-plan {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+      border-color: rgba(102, 126, 234, 0.3);
+      
+      &:hover {
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
+        border-color: rgba(102, 126, 234, 0.5);
+      }
     }
     
     .plan-header {

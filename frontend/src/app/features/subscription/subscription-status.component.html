@@ -14,6 +14,50 @@
     </mat-card-header>
 
     <mat-card-content>
+      <!-- Early Access Status Info -->
+      <div class="early-access-info-box" *ngIf="limits.early_access_info?.is_active">
+        <div class="info-header">
+          <mat-icon class="star-icon">stars</mat-icon>
+          <h3>🎯 Early-Access Phase aktiv</h3>
+        </div>
+        <div class="info-content">
+          <div class="info-grid">
+            <div class="info-item">
+              <mat-icon>groups</mat-icon>
+              <div class="info-details">
+                <span class="info-label">Verfügbare Plätze</span>
+                <span class="info-value">{{ limits.early_access_info?.remaining_slots }} von {{ limits.early_access_info?.max_customers }}</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>schedule</mat-icon>
+              <div class="info-details">
+                <span class="info-label">Verbleibende Zeit</span>
+                <span class="info-value">{{ limits.early_access_info?.days_remaining }} Tage</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>event</mat-icon>
+              <div class="info-details">
+                <span class="info-label">Endet am</span>
+                <span class="info-value">{{ limits.early_access_info?.end_date | date:'dd.MM.yyyy' }}</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <mat-icon>workspace_premium</mat-icon>
+              <div class="info-details">
+                <span class="info-label">Aktuell registriert</span>
+                <span class="info-value">{{ limits.early_access_info?.current_customers }} Kunden</span>
+              </div>
+            </div>
+          </div>
+          <div class="info-message">
+            <mat-icon>info</mat-icon>
+            <p>Die Early-Access Phase endet nach {{ limits.early_access_info?.duration_months }} Monaten oder sobald {{ limits.early_access_info?.max_customers }} Kunden erreicht sind. Wer sich jetzt anmeldet, sichert sich dauerhaft die vergünstigten Preise!</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Abteilungen -->
       <div class="limit-section">
         <div class="limit-header">
@@ -66,11 +110,21 @@
         </div>
       </div>
 
+      <!-- Early Access Badge -->
+      <div class="early-access-badge" *ngIf="limits.early_access_savings?.is_early_access_customer && limits.pricing_type === 'Early-Access'">
+        <mat-icon class="trophy-icon">emoji_events</mat-icon>
+        <div class="badge-content">
+          <h3>🎉 Early-Access Kunde</h3>
+          <p class="savings-message">{{ limits.early_access_savings?.message }}</p>
+        </div>
+      </div>
+
       <!-- Preis -->
       <div class="pricing-section">
         <div class="pricing-header">
           <mat-icon>euro</mat-icon>
           <h3>Aktuelle Kosten</h3>
+          <span class="pricing-type-badge" *ngIf="limits.pricing_type">{{ limits.pricing_type }}</span>
         </div>
         <div class="pricing-content">
           <div class="trial-notice" *ngIf="limits.pricing.is_trial">
@@ -88,10 +142,16 @@
             </div>
             <div class="price-item">
               <span class="label">Pro Mitarbeiter:</span>
-              <span class="value" [class.free-text]="limits.pricing.is_trial">
+              <span class="value" [class.early-access-price]="limits.early_access_savings?.is_early_access_customer">
+                <span *ngIf="limits.early_access_savings?.is_early_access_customer && !limits.pricing.is_trial" class="strikethrough standard-price">
+                  {{ limits.early_access_savings?.standard_price_per_employee | number:'1.2-2' }} €
+                </span>
                 <span *ngIf="limits.pricing.is_trial" class="strikethrough">{{ limits.pricing.original_price_per_employee | number:'1.2-2' }} €</span>
                 <span *ngIf="!limits.pricing.is_trial">{{ limits.pricing.price_per_employee | number:'1.2-2' }} €</span>
                 <span *ngIf="limits.pricing.is_trial" class="free-badge">KOSTENLOS</span>
+                <span *ngIf="limits.early_access_savings?.is_early_access_customer && !limits.pricing.is_trial" class="early-access-label">
+                  Early-Access
+                </span>
               </span>
             </div>
             <div class="price-item">
@@ -102,6 +162,24 @@
           <div class="total-price" [class.free-total]="limits.pricing.is_trial">
             <span class="label">Gesamt pro Monat:</span>
             <span class="value">{{ limits.pricing.monthly_cost | number:'1.2-2' }} €</span>
+          </div>
+          
+          <!-- Early Access Savings Details -->
+          <div class="savings-details" *ngIf="limits.early_access_savings?.is_early_access_customer && limits.early_access_savings?.monthly_savings && (limits.early_access_savings?.monthly_savings ?? 0) > 0">
+            <div class="savings-highlight">
+              <mat-icon>savings</mat-icon>
+              <div class="savings-info">
+                <span class="savings-label">Ihre Ersparnis als Early-Access Kunde:</span>
+                <span class="savings-amount">{{ limits.early_access_savings?.monthly_savings | number:'1.2-2' }} € / Monat</span>
+                <span class="savings-per-employee">
+                  ({{ limits.early_access_savings?.savings_per_employee | number:'1.2-2' }} € pro Mitarbeiter)
+                </span>
+              </div>
+            </div>
+            <div class="savings-note">
+              <mat-icon>lock</mat-icon>
+              <span>✨ Dieser Preisvorteil bleibt dauerhaft bestehen!</span>
+            </div>
           </div>
         </div>
       </div>

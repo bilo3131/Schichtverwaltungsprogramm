@@ -37,7 +37,22 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         return Department.objects.none()
     
     def perform_create(self, serializer):
-        serializer.save(organization=self.request.user.organization)
+        user = self.request.user
+        organization = user.organization
+        
+        if not organization:
+            raise PermissionDenied('Sie sind keiner Organisation zugeordnet.')
+        
+        # Subscription Limit prüfen
+        if organization.subscription:
+            if not organization.subscription.can_add_department(organization):
+                max_depts = organization.subscription.max_departments
+                raise PermissionDenied(
+                    f'Ihr {organization.subscription.get_tier_display()} Plan erlaubt maximal {max_depts} Abteilung(en). '
+                    f'Bitte upgraden Sie Ihre Subscription.'
+                )
+        
+        serializer.save(organization=organization)
 
 
 class QualificationViewSet(viewsets.ModelViewSet):
@@ -123,6 +138,24 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 )
         
         return super().partial_update(request, *args, **kwargs)
+    
+    def perform_create(self, serializer):
+        user = self.request.user
+        organization = user.organization
+        
+        if not organization:
+            raise PermissionDenied('Sie sind keiner Organisation zugeordnet.')
+        
+        # Subscription Limit prüfen
+        if organization.subscription:
+            if not organization.subscription.can_add_employee(organization):
+                max_employees = organization.subscription.max_employees
+                raise PermissionDenied(
+                    f'Ihr {organization.subscription.get_tier_display()} Plan erlaubt maximal {max_employees} Mitarbeiter. '
+                    f'Bitte upgraden Sie Ihre Subscription.'
+                )
+        
+        serializer.save()
     
     @action(detail=True, methods=['get'])
     def hours_summary(self, request, pk=None):

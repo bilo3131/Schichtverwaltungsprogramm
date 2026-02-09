@@ -34,6 +34,154 @@
     mat-card-content {
       padding-top: 1.5rem;
 
+      .early-access-info-box {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+        
+        .info-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          
+          .star-icon {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+            color: #667eea;
+            animation: pulse-star 2s ease-in-out infinite;
+          }
+          
+          h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+        }
+        
+        .info-content {
+          .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+          
+          .info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+            
+            &:hover {
+              background: rgba(255, 255, 255, 0.9);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            }
+            
+            mat-icon {
+              font-size: 28px;
+              width: 28px;
+              height: 28px;
+              color: #667eea;
+            }
+            
+            .info-details {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              
+              .info-label {
+                font-size: 12px;
+                color: rgba(0, 0, 0, 0.6);
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .info-value {
+                font-size: 18px;
+                font-weight: 700;
+                color: #667eea;
+              }
+            }
+          }
+          
+          .info-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 16px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            
+            mat-icon {
+              font-size: 24px;
+              width: 24px;
+              height: 24px;
+              color: #667eea;
+              margin-top: 2px;
+            }
+            
+            p {
+              margin: 0;
+              font-size: 14px;
+              line-height: 1.6;
+              color: rgba(0, 0, 0, 0.8);
+            }
+          }
+        }
+      }
+
+      .early-access-badge {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+        .trophy-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          color: #ffd700;
+        }
+
+        .badge-content {
+          flex: 1;
+
+          h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.3rem;
+            font-weight: 600;
+          }
+
+          .savings-message {
+            margin: 0;
+            font-size: 1rem;
+            opacity: 0.95;
+            font-weight: 500;
+          }
+        }
+      }
+
       .limit-section, .pricing-section {
         margin-bottom: 2rem;
         padding: 1rem;
@@ -55,6 +203,16 @@
             font-size: 1.1rem;
             font-weight: 500;
             color: #333;
+          }
+
+          .pricing-type-badge {
+            margin-left: auto;
+            padding: 0.25rem 0.75rem;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
           }
         }
 
@@ -161,16 +319,34 @@
                   align-items: flex-end;
                 }
 
+                &.early-access-price {
+                  flex-direction: column;
+                  align-items: flex-end;
+                  gap: 0.25rem;
+                }
+
                 .strikethrough {
                   text-decoration: line-through;
                   opacity: 0.5;
                   font-size: 0.85em;
+
+                  &.standard-price {
+                    color: #999;
+                  }
                 }
 
                 .free-badge {
                   color: #4caf50;
                   font-weight: 700;
                   font-size: 0.9em;
+                }
+
+                .early-access-label {
+                  color: #667eea;
+                  font-weight: 600;
+                  font-size: 0.75em;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
                 }
               }
             }
@@ -202,6 +378,67 @@
               }
             }
           }
+
+          .savings-details {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 12px;
+            color: white;
+
+            .savings-highlight {
+              display: flex;
+              align-items: flex-start;
+              gap: 1rem;
+              margin-bottom: 1rem;
+
+              mat-icon {
+                font-size: 32px;
+                width: 32px;
+                height: 32px;
+                color: #ffd700;
+              }
+
+              .savings-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+
+                .savings-label {
+                  font-size: 0.9rem;
+                  opacity: 0.95;
+                }
+
+                .savings-amount {
+                  font-size: 1.5rem;
+                  font-weight: 700;
+                }
+
+                .savings-per-employee {
+                  font-size: 0.85rem;
+                  opacity: 0.9;
+                }
+              }
+            }
+
+            .savings-note {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              padding: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              border-radius: 8px;
+              font-size: 0.9rem;
+              font-weight: 500;
+
+              mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+              }
+            }
+          }
         }
       }
 
@@ -230,6 +467,17 @@
   }
 }
 
+@keyframes pulse-star {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
 :host-context(.dark-theme) .subscription-status {
   mat-card {
     mat-card-header {
@@ -247,6 +495,54 @@
     }
     
     mat-card-content {
+      .early-access-info-box {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        border-color: rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
+        
+        .info-header h3 {
+          background: linear-gradient(135deg, #8fa3ff 0%, #9d7cc4 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .info-content {
+          .info-item {
+            background: rgba(48, 48, 48, 0.6);
+            border-color: rgba(102, 126, 234, 0.3);
+            
+            &:hover {
+              background: rgba(48, 48, 48, 0.8);
+            }
+            
+            .info-details {
+              .info-label {
+                color: rgba(255, 255, 255, 0.6);
+              }
+              
+              .info-value {
+                color: #8fa3ff;
+              }
+            }
+          }
+          
+          .info-message {
+            background: rgba(48, 48, 48, 0.6);
+            border-left-color: #8fa3ff;
+            
+            p {
+              color: rgba(255, 255, 255, 0.8);
+            }
+          }
+        }
+      }
+
+      .early-access-badge {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+      }
+
       .limit-section, .pricing-section {
         background: #303030;
         

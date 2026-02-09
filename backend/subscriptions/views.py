@@ -47,18 +47,117 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         """Prüft die aktuellen Limits und gibt detaillierte Informationen zurück"""
         user = request.user
         subscription = None
+        organization = None
         
         # Subscription über Organization abrufen
         if user.organization and user.organization.subscription:
             subscription = user.organization.subscription
+            organization = user.organization
         
         if subscription:
-            return Response(subscription.get_limits_info())
+            return Response(subscription.get_limits_info(organization))
         
         return Response(
             {'detail': 'Keine Subscription gefunden.'},
             status=status.HTTP_404_NOT_FOUND
         )
+    
+    @action(detail=False, methods=['get'])
+    def tier_options(self, request):
+        """Gibt alle verfügbaren Tier-Optionen mit Preisen zurück"""
+        from .models import EarlyAccessSettings
+        
+        # Prüfe ob Early-Access noch aktiv ist
+        try:
+            early_settings = EarlyAccessSettings.objects.first()
+            is_early_access_active = early_settings.is_early_access_active() if early_settings else False
+        except:
+            is_early_access_active = False
+        
+        tiers = [
+            {
+                'tier': 'starter',
+                'tier_display': 'Starter',
+                'base_price': 29.00,
+                'max_departments': 1,
+                'max_employees': 20,
+                'description': 'Ideal für kleine Teams',
+                'features': [
+                    '1 Abteilung',
+                    'Bis zu 20 Mitarbeiter',
+                    'Schichtplanung',
+                    'Urlaubsverwaltung'
+                ],
+                'pricing': {
+                    'early_access': {
+                        'price_per_employee': 1.50,
+                        'price_cap': None,
+                        'available': is_early_access_active
+                    },
+                    'standard': {
+                        'price_per_employee': 2.00,
+                        'price_cap': None
+                    }
+                }
+            },
+            {
+                'tier': 'pro',
+                'tier_display': 'Pro',
+                'base_price': 59.00,
+                'max_departments': 10,
+                'max_employees': 150,
+                'description': 'Für wachsende Unternehmen',
+                'features': [
+                    'Bis zu 10 Abteilungen',
+                    'Bis zu 150 Mitarbeiter',
+                    'Erweiterte Schichtplanung',
+                    'Urlaubsverwaltung',
+                    'Reporting & Analytics'
+                ],
+                'pricing': {
+                    'early_access': {
+                        'price_per_employee': 1.00,
+                        'price_cap': None,
+                        'available': is_early_access_active
+                    },
+                    'standard': {
+                        'price_per_employee': 1.50,
+                        'price_cap': None
+                    }
+                }
+            },
+            {
+                'tier': 'business',
+                'tier_display': 'Business',
+                'base_price': 99.00,
+                'max_departments': -1,  # unlimited
+                'max_employees': -1,    # unlimited
+                'description': 'Für große Unternehmen',
+                'features': [
+                    'Unbegrenzte Abteilungen',
+                    'Unbegrenzte Mitarbeiter',
+                    'Alle Pro Features',
+                    'Priority Support',
+                    'Custom Integrationen'
+                ],
+                'pricing': {
+                    'early_access': {
+                        'price_per_employee': 0.80,
+                        'price_cap': 399.00,
+                        'available': is_early_access_active
+                    },
+                    'standard': {
+                        'price_per_employee': 1.00,
+                        'price_cap': 499.00
+                    }
+                }
+            }
+        ]
+        
+        return Response({
+            'tiers': tiers,
+            'early_access_active': is_early_access_active
+        })
     
     @action(detail=True, methods=['post'])
     def upgrade(self, request, pk=None):

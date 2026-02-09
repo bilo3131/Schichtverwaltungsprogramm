@@ -4,6 +4,25 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
+export interface EarlyAccessSavings {
+  is_early_access_customer: boolean;
+  savings_per_employee: number;
+  standard_price_per_employee: number;
+  monthly_savings: number;
+  message: string;
+}
+
+export interface EarlyAccessInfo {
+  is_active: boolean;
+  start_date: string;
+  end_date: string;
+  max_customers: number;
+  current_customers: number;
+  remaining_slots: number;
+  days_remaining: number;
+  duration_months: number;
+}
+
 export interface SubscriptionLimits {
   tier: 'starter' | 'pro' | 'business';
   tier_display: string;
@@ -32,6 +51,9 @@ export interface SubscriptionLimits {
     trial_end_date: string | null;
     subscription_end_date: string | null;
   };
+  early_access_savings?: EarlyAccessSavings;
+  early_access_info?: EarlyAccessInfo;
+  pricing_type?: string;
 }
 
 export interface Subscription {
@@ -44,6 +66,8 @@ export interface Subscription {
   base_price: number;
   price_per_employee: number;
   is_active: boolean;
+  is_early_access?: boolean;
+  pricing_type?: string;
   trial_end_date: string | null;
   subscription_start_date: string;
   subscription_end_date: string | null;
@@ -147,8 +171,8 @@ export class SubscriptionService {
         maxEmployees: 150,
         basePrice: 59,
         pricePerEmployee: 1.00,
-        disabled: true,
-        comingSoon: true,
+        earlyAccessPrice: 1.00,
+        standardPrice: 1.50,
         features: [
           'Bis zu 10 Abteilungen',
           'Bis zu 150 Mitarbeiter',
@@ -165,8 +189,8 @@ export class SubscriptionService {
         maxEmployees: -1,
         basePrice: 99,
         pricePerEmployee: 0.80,
-        disabled: true,
-        comingSoon: true,
+        earlyAccessPrice: 0.80,
+        standardPrice: 1.00,
         features: [
           'Unbegrenzte Abteilungen',
           'Unbegrenzte Mitarbeiter',

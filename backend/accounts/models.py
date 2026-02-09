@@ -18,6 +18,11 @@ class Organization(models.Model):
         related_name='organizations',
         verbose_name="Subscription"
     )
+    is_early_access = models.BooleanField(
+        default=False,
+        verbose_name="Early-Access Kunde",
+        help_text="Wenn aktiviert, erhält diese Organization dauerhaft die vergünstigten Early-Access Preise"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
