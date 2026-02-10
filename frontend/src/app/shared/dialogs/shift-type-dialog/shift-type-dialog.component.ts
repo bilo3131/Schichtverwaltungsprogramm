@@ -56,7 +56,7 @@ export class ShiftTypeDialogComponent implements OnInit {
     
     this.shiftTypeForm = this.fb.group({
       name: [data.shiftType?.name || '', Validators.required],
-      department: [defaultDepartment],
+      department: [defaultDepartment, Validators.required],
       required_qualifications: [data.shiftType?.required_qualifications || []],
       start_time: [data.shiftType?.start_time || '', Validators.required],
       end_time: [data.shiftType?.end_time || '', Validators.required],
