@@ -162,10 +162,10 @@ export class CalendarComponent implements OnInit {
         this.events = data.results || data;
         
         // Filtere Events: Nur Events anzeigen, bei denen der aktuelle Benutzer Teilnehmer ist
-        const currentUserId = this.authService.currentUserValue?.id;
-        const filteredEvents = currentUserId 
+        const currentEmployeeId = this.authService.currentUserValue?.employee_profile?.id;
+        const filteredEvents = currentEmployeeId 
           ? this.events.filter(event => 
-              event.attendees && event.attendees.includes(currentUserId)
+              event.attendees && event.attendees.includes(currentEmployeeId)
             )
           : [];
         
@@ -364,7 +364,8 @@ export class CalendarComponent implements OnInit {
 
   openEventDetailDialog(event: Event): void {
     const currentUser = this.authService.currentUserValue;
-    const currentUserId = currentUser?.employee_profile?.id;
+    const currentUserId = currentUser?.id;
+    const currentEmployeeId = currentUser?.employee_profile?.id;
     
     const dialogRef = this.dialog.open(EventDetailDialogComponent, {
       width: '600px',
@@ -373,6 +374,7 @@ export class CalendarComponent implements OnInit {
         employees: this.employees,
         departments: this.departments,
         currentUserId,
+        currentEmployeeId,
         onEdit: () => {
           this.openEventDialog(event);
         },

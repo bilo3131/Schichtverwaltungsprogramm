@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Subscription, EarlyAccessSettings
+from accounts.models import Organization
 
 
 @admin.register(EarlyAccessSettings)
@@ -24,7 +25,11 @@ class EarlyAccessSettingsAdmin(admin.ModelAdmin):
     get_end_date.short_description = 'End-Datum'
     
     def get_current_count(self, obj):
-        return Subscription.objects.filter(is_early_access=True).count()
+        # Zähle nur bezahlte Kunden (Pro/Business), nicht Trial-User
+        return Organization.objects.filter(
+            is_early_access=True,
+            subscription__tier__in=['pro', 'business']
+        ).count()
     get_current_count.short_description = 'Aktuelle Early-Access Kunden'
     
     def early_access_status(self, obj):

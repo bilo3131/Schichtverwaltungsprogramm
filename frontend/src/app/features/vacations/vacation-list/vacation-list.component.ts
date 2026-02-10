@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
@@ -32,7 +31,6 @@ import { UI_CONSTANTS } from '../../../core/constants/ui.constants';
     MatIconModule,
     MatTableModule,
     MatChipsModule,
-    MatTabsModule,
     MatBadgeModule,
     MatTooltipModule,
     MatSnackBarModule,

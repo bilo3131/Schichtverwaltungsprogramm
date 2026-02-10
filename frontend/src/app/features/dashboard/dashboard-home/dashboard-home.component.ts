@@ -4,12 +4,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ShiftService } from '../../../core/services/shift.service';
 import { EmployeeService } from '../../../core/services/employee.service';
 import { EventService } from '../../../core/services/event.service';
 import { DashboardFilterService } from '../../../core/services/dashboard-filter.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { AbsenceDialogComponent } from '../../../shared/dialogs/absence-dialog/absence-dialog.component';
 import { forkJoin } from 'rxjs';
 
 interface DashboardStats {
@@ -29,6 +33,10 @@ interface DashboardStats {
   overtimeTarget: number;
   upcomingEvents: number;
   nextEventDate?: string;
+  nextHoliday?: string;
+  nextHolidayDate?: string;
+  nextVacation?: string;
+  nextVacationDate?: string;
 
   // Manager KPIs
   understaffedShifts: number;
@@ -66,7 +74,8 @@ interface DashboardStats {
     MatCardModule,
     MatIconModule,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule
   ],
   templateUrl: './dashboard-home.component.html',
   styleUrls: ['./dashboard-home.component.scss']
@@ -116,6 +125,9 @@ export class DashboardHomeComponent implements OnInit {
     private shiftService: ShiftService,
     private employeeService: EmployeeService,
     private dashboardFilterService: DashboardFilterService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    private notificationService: NotificationService,
     private eventService?: EventService
   ) {}
 
@@ -279,7 +291,81 @@ export class DashboardHomeComponent implements OnInit {
           this.stats.overtimeHours = currentEmployee.overtime_hours || 0;
           // Zielwert basierend auf Arbeitsvertrag (40h Standard)
           this.stats.overtimeTarget = 0; // Bei 0 bedeutet es: Überstunden sind relativ zu Sollstunden
+          
+          // Genehmigte Urlaubsanträge in den nächsten 14 Tagen - NUR für diesen Mitarbeiter
+          this.employeeService.getVacationRequests('approved', {
+            employee: this.currentEmployeeId  // Verwende Employee-ID statt User-ID
+          }).subscribe({
+            next: (vacData) => {
+              const vacations = vacData.results || [];
+              const now = new Date();
+              now.setHours(0, 0, 0, 0);
+              const twoWeeksFromNow = new Date();
+              twoWeeksFromNow.setDate(now.getDate() + 14);
+
+              // Filtere Urlaubsanträge die in den nächsten 14 Tagen beginnen oder laufen
+              const upcomingVacations = vacations.filter((v: any) => {
+                const startDate = new Date(v.start_date);
+                const endDate = new Date(v.end_date);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(0, 0, 0, 0);
+
+                // Urlaub beginnt in den nächsten 14 Tagen oder läuft aktuell
+                return (startDate >= now && startDate <= twoWeeksFromNow) || 
+                       (startDate <= now && endDate >= now);
+              }).sort((a: any, b: any) => 
+                new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+              );
+
+              if (upcomingVacations.length > 0) {
+                const nextVacation = upcomingVacations[0];
+                const vacationStart = new Date(nextVacation.start_date);
+                const vacationEnd = new Date(nextVacation.end_date);
+                vacationStart.setHours(0, 0, 0, 0);
+                vacationEnd.setHours(0, 0, 0, 0);
+
+                // Prüfe ob Urlaub aktuell läuft
+                if (vacationStart <= now && vacationEnd >= now) {
+                  this.stats.nextVacation = 'Aktuell im Urlaub';
+                  this.stats.nextVacationDate = `bis ${this.getRelativeDate(vacationEnd)}`;
+                } else {
+                  this.stats.nextVacation = 'Urlaub geplant';
+                  this.stats.nextVacationDate = this.getRelativeDate(vacationStart);
+                }
+              }
+            },
+            error: (error) => {
+              console.error('Error loading vacation requests:', error);
+            }
+          });
         }
+      }
+    });
+
+    // Feiertage in den nächsten 14 Tagen
+    const todayDate = new Date();
+    const inTwoWeeks = new Date();
+    inTwoWeeks.setDate(todayDate.getDate() + 14);
+
+    this.notificationService.getHolidays(
+      todayDate.toISOString().split('T')[0],
+      inTwoWeeks.toISOString().split('T')[0]
+    ).subscribe({
+      next: (data) => {
+        const holidays = data.results || data || [];
+        if (holidays.length > 0) {
+          // Sortiere nach Datum und nimm den nächsten
+          const sortedHolidays = holidays.sort((a: any, b: any) => 
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+          const nextHoliday = sortedHolidays[0];
+          this.stats.nextHoliday = nextHoliday.name;
+          const holidayDate = new Date(nextHoliday.date);
+          this.stats.nextHolidayDate = this.getRelativeDate(holidayDate);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading holidays:', error);
       }
     });
   }
@@ -336,8 +422,65 @@ export class DashboardHomeComponent implements OnInit {
           this.stats.avgApprovalTime = 0;
         }
 
-        // Krankenstand - nur Abwesenheiten, die heute aktiv sind
-        const today = new Date(startDate);
+        // Krankenstand - aktuelle Kalenderwoche (Mo-So)
+        const today = new Date();
+        
+        // Berechne Start (Montag) und Ende (Sonntag) der aktuellen Kalenderwoche
+        const currentWeekStart = new Date(today);
+        const dayOfWeek = today.getDay();
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Montag = Start
+        currentWeekStart.setDate(today.getDate() + diff);
+        currentWeekStart.setHours(0, 0, 0, 0);
+        
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Sonntag
+        currentWeekEnd.setHours(23, 59, 59, 999);
+        
+        // Berechne Vorwoche
+        const lastWeekStart = new Date(currentWeekStart);
+        lastWeekStart.setDate(currentWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(currentWeekEnd);
+        lastWeekEnd.setDate(currentWeekEnd.getDate() - 7);
+        
+        // Krankenstand aktuelle Woche - zähle alle Tage an denen jemand krank war
+        const sickDaysCurrentWeek = new Set<string>(); // Set von "employeeId-date" für eindeutige Tage
+        absences.forEach((a: any) => {
+          if (a.absence_type !== 'sick') return;
+          const start = new Date(a.start_date);
+          const end = new Date(a.end_date);
+          
+          // Iteriere über alle Tage der Krankheit, die in der aktuellen Woche liegen
+          for (let d = new Date(Math.max(start.getTime(), currentWeekStart.getTime())); 
+               d.getTime() <= Math.min(end.getTime(), currentWeekEnd.getTime()); 
+               d.setDate(d.getDate() + 1)) {
+            sickDaysCurrentWeek.add(`${a.employee}-${d.toISOString().split('T')[0]}`);
+          }
+        });
+        
+        // Krankenstand Vorwoche
+        const sickDaysLastWeek = new Set<string>();
+        absences.forEach((a: any) => {
+          if (a.absence_type !== 'sick') return;
+          const start = new Date(a.start_date);
+          const end = new Date(a.end_date);
+          
+          for (let d = new Date(Math.max(start.getTime(), lastWeekStart.getTime())); 
+               d.getTime() <= Math.min(end.getTime(), lastWeekEnd.getTime()); 
+               d.setDate(d.getDate() + 1)) {
+            sickDaysLastWeek.add(`${a.employee}-${d.toISOString().split('T')[0]}`);
+          }
+        });
+        
+        // Durchschnittlicher Krankenstand pro Tag in der Woche
+        const avgSickCurrentWeek = sickDaysCurrentWeek.size / 7; // 7 Tage
+        const avgSickLastWeek = sickDaysLastWeek.size / 7;
+        
+        // Krankenstand als Prozentsatz (durchschnittlich kranke MA pro Tag / Gesamt-MA)
+        this.stats.sickRate = this.stats.totalEmployees > 0 
+          ? Math.round((avgSickCurrentWeek / this.stats.totalEmployees) * 100) 
+          : 0;
+        
+        // Anzahl aktuell kranker Mitarbeiter (heute)
         const sickToday = absences.filter((a: any) => {
           if (a.absence_type !== 'sick') return false;
           const start = new Date(a.start_date);
@@ -345,10 +488,13 @@ export class DashboardHomeComponent implements OnInit {
           return today >= start && today <= end;
         }).length;
         this.stats.sickEmployees = sickToday;
-        this.stats.sickRate = this.stats.totalEmployees > 0 
-          ? Math.round((sickToday / this.stats.totalEmployees) * 100) 
+        
+        // Trend: Vergleich aktuelle Woche vs Vorwoche
+        const sickRateLastWeek = this.stats.totalEmployees > 0 
+          ? Math.round((avgSickLastWeek / this.stats.totalEmployees) * 100) 
           : 0;
-        this.stats.sickRateTrend = this.stats.sickRate > 10 ? 2 : this.stats.sickRate < 5 ? -1 : 0;
+        this.stats.sickRateTrend = this.stats.sickRate - sickRateLastWeek;
+
 
         // Im Urlaub - nur Abwesenheiten, die heute aktiv sind
         const onVacationToday = absences.filter((a: any) => {
@@ -633,6 +779,70 @@ export class DashboardHomeComponent implements OnInit {
 
   navigateTo(route: string): void {
     this.router.navigate([route]);
+  }
+
+  openSickLeaveDialog(): void {
+    // Lade aktuelle Mitarbeiterdaten
+    this.employeeService.getEmployees().subscribe({
+      next: (data) => {
+        const employees = data.results || [];
+        
+        // Finde den aktuellen User als Employee
+        const currentEmployee = employees.find((emp: any) => emp.user === this.currentUserId);
+        
+        if (!currentEmployee) {
+          this.snackBar.open(
+            'Sie müssen als Mitarbeiter angelegt sein, um eine Krankmeldung abzugeben.',
+            'Schließen',
+            { duration: 5000 }
+          );
+          return;
+        }
+
+        const dialogRef = this.dialog.open(AbsenceDialogComponent, {
+          width: '500px',
+          data: {
+            absence: {
+              employee: currentEmployee.id,
+              absence_type: 'sick',
+              start_date: new Date(),
+              end_date: new Date(),
+              notes: ''
+            },
+            employees: employees,
+            isSickReportMode: true  // Vereinfachter Modus für Krankmeldung
+          }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) {
+            this.employeeService.createAbsence(result).subscribe({
+              next: () => {
+                this.snackBar.open('Krankmeldung erfolgreich erstellt', 'Schließen', {
+                  duration: 3000,
+                  panelClass: ['success-snackbar']
+                });
+                this.loadStats(); // Reload stats
+              },
+              error: (error: any) => {
+                this.snackBar.open(
+                  error.error?.detail || 'Fehler beim Erstellen der Krankmeldung',
+                  'Schließen',
+                  { duration: 5000, panelClass: ['error-snackbar'] }
+                );
+              }
+            });
+          }
+        });
+      },
+      error: () => {
+        this.snackBar.open(
+          'Fehler beim Laden der Mitarbeiterdaten',
+          'Schließen',
+          { duration: 5000 }
+        );
+      }
+    });
   }
 
   calculateShiftDuration(startTime: string, endTime: string, breakDuration: number = 0): number {

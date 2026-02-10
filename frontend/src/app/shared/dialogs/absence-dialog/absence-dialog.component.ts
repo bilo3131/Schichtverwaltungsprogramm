@@ -63,12 +63,15 @@ class CustomDateAdapter extends NativeDateAdapter {
 })
 export class AbsenceDialogComponent {
   absenceForm: FormGroup;
+  isSickReportMode = false;
 
   constructor(
     private fb: FormBuilder,
     public dialogRef: MatDialogRef<AbsenceDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { absence?: AbsenceRecord, employees: Employee[] }
+    @Inject(MAT_DIALOG_DATA) public data: { absence?: AbsenceRecord, employees: Employee[], isSickReportMode?: boolean }
   ) {
+    this.isSickReportMode = data.isSickReportMode || false;
+    
     this.absenceForm = this.fb.group({
       employee: [data.absence?.employee || '', Validators.required],
       absence_type: [data.absence?.absence_type || '', Validators.required],

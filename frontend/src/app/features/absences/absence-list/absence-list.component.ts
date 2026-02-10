@@ -220,7 +220,9 @@ export class AbsenceListComponent implements OnInit, AfterViewInit, OnDestroy {
       case 'current':
         filtered = absences.filter(a => {
           const start = new Date(a.start_date);
+          start.setHours(0, 0, 0, 0);
           const end = a.end_date ? new Date(a.end_date) : new Date('2099-12-31');
+          end.setHours(0, 0, 0, 0);
           return start <= today && end >= today;
         });
         break;
@@ -260,7 +262,9 @@ export class AbsenceListComponent implements OnInit, AfterViewInit, OnDestroy {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = new Date(absence.start_date);
+    start.setHours(0, 0, 0, 0);
     const end = absence.end_date ? new Date(absence.end_date) : new Date('2099-12-31');
+    end.setHours(0, 0, 0, 0);
     return start <= today && end >= today;
   }
 

@@ -6,6 +6,27 @@
         align-items: center;
         margin-bottom: 2rem;
 
+        .header-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          
+          h1 {
+            margin: 0;
+          }
+          
+          .pending-badge {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+            animation: pulse-badge 2s ease-in-out infinite;
+          }
+        }
+
         .header-actions {
           display: flex;
           gap: 0.5rem;
@@ -16,6 +37,15 @@
           mat-icon {
             margin-right: 0.5rem;
           }
+        }
+      }
+
+      @keyframes pulse-badge {
+        0%, 100% {
+          box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+        }
+        50% {
+          box-shadow: 0 2px 16px rgba(244, 67, 54, 0.5);
         }
       }
 

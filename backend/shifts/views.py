@@ -361,12 +361,14 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
             
             # Erstelle neues AbsenceRecord mit aktualisierten Daten, wenn noch genehmigt
             if updated_vacation.status == 'approved':
+                # Erstelle Notiz mit dem Namen der genehmigenden Person
+                approver_name = updated_vacation.approved_by.get_full_name() if updated_vacation.approved_by and updated_vacation.approved_by.get_full_name() else (updated_vacation.approved_by.username if updated_vacation.approved_by else 'Unbekannt')
                 AbsenceRecord.objects.create(
                     employee=updated_vacation.employee,
                     start_date=updated_vacation.start_date,
                     end_date=updated_vacation.end_date,
                     absence_type='vacation',
-                    notes=f'Genehmigter Urlaubsantrag (ID: {updated_vacation.id})'
+                    notes=f'Genehmigter Urlaubsantrag - Genehmigt von {approver_name}'
                 )
     
     def perform_destroy(self, instance):
@@ -419,13 +421,15 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
         vacation_request.save()
         
         # Automatisch AbsenceRecord erstellen für genehmigte Urlaubsanträge
+        # Erstelle Notiz mit dem Namen der genehmigenden Person
+        approver_name = request.user.get_full_name() if request.user.get_full_name() else request.user.username
         AbsenceRecord.objects.get_or_create(
             employee=vacation_request.employee,
             start_date=vacation_request.start_date,
             end_date=vacation_request.end_date,
             absence_type='vacation',
             defaults={
-                'notes': f'Genehmigter Urlaubsantrag (ID: {vacation_request.id})'
+                'notes': f'Genehmigter Urlaubsantrag - Genehmigt von {approver_name}'
             }
         )
         

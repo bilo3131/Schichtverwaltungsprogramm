@@ -35,12 +35,20 @@ class EarlyAccessSettings(models.Model):
         if not self.is_active:
             return False
         
+        # Prüfe ob Early-Access bereits gestartet ist (nicht in der Zukunft)
+        if timezone.now() < self.start_date:
+            return False
+        
         # Prüfe Zeitlimit
         if timezone.now() > self.get_end_date():
             return False
         
-        # Prüfe Kundenlimit (alle Subscriptions mit is_early_access=True)
-        early_access_count = Subscription.objects.filter(is_early_access=True).count()
+        # Prüfe Kundenlimit - zähle nur bezahlte Kunden (Pro/Business), nicht Trial-User
+        from accounts.models import Organization
+        early_access_count = Organization.objects.filter(
+            is_early_access=True,
+            subscription__tier__in=['pro', 'business']
+        ).count()
         if early_access_count >= self.max_customers:
             return False
         

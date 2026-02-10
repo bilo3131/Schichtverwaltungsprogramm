@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Subscription, SubscriptionTier, EarlyAccessSettings
+from accounts.models import Organization
 from datetime import date
+from django.utils import timezone
 
 
 class EarlyAccessInfoSerializer(serializers.Serializer):
@@ -101,28 +103,64 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return info
     
     def get_early_access_info(self):
-        """Gibt den aktuellen Early-Access Status zurück"""
+        """Gibt den aktuellen Early-Access Status zurück - NUR für Trial-User die noch KEIN Early-Access Kunde sind"""
         try:
+            # Hole die Organization aus dem Request-Context
+            organization = self.get_organization()
+            if not organization:
+                return None
+            
+            # Prüfe ob Organization eine Subscription hat
+            if not organization.subscription:
+                return None
+            
+            # Nur anzeigen wenn Organization's Subscription im Trial ist (Starter Tier)
+            if organization.subscription.tier != 'starter':
+                return None  # Nur für Trial-User relevant
+            
+            # Prüfe ob Organization bereits Early-Access Kunde ist
+            if organization.is_early_access:
+                return None  # Bereits Early-Access Kunde - Box nicht mehr nötig
+            
             settings = EarlyAccessSettings.objects.first()
             if not settings:
                 return None
             
+            # Prüfe ob Early-Access bereits gestartet ist (nicht in der Zukunft)
+            if timezone.now() < settings.start_date:
+                return None  # Phase hat noch nicht begonnen
+            
             is_active = settings.is_early_access_active()
-            current_count = Subscription.objects.filter(is_early_access=True).count()
+            if not is_active:
+                return None  # Nur während aktiver Early-Access Phase zeigen
+            
+            # Zähle nur Organisationen mit bezahltem Abo (Pro/Business), nicht Trial-User
+            current_count = Organization.objects.filter(
+                is_early_access=True,
+                subscription__tier__in=['pro', 'business']
+            ).count()
+            
             end_date = settings.get_end_date()
-            days_remaining = (end_date - date.today()).days if end_date > date.today() else 0
+            
+            # Konvertiere datetime zu date für Vergleich
+            end_date_only = end_date.date() if hasattr(end_date, 'date') else end_date
+            today = date.today()
+            days_remaining = (end_date_only - today).days if end_date_only > today else 0
             
             return {
                 'is_active': is_active,
                 'start_date': settings.start_date,
-                'end_date': end_date,
+                'end_date': end_date_only,
                 'max_customers': settings.max_customers,
                 'current_customers': current_count,
                 'remaining_slots': max(0, settings.max_customers - current_count),
                 'days_remaining': days_remaining,
                 'duration_months': settings.duration_months
             }
-        except Exception:
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in get_early_access_info: {e}", exc_info=True)
             return None
     
     def get_tier_options(self):

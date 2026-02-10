@@ -217,21 +217,19 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
     }
 
     /* Dark Mode Unterstützung */
-    @media (prefers-color-scheme: dark) {
-      .event-detail-dialog {
-        .detail-item {
-          mat-icon {
+    :host-context(.dark-theme) .event-detail-dialog {
+      .detail-item {
+        mat-icon {
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .detail-content {
+          .detail-label {
             color: rgba(255, 255, 255, 0.7);
           }
 
-          .detail-content {
-            .detail-label {
-              color: rgba(255, 255, 255, 0.7);
-            }
-
-            .detail-value {
-              color: rgba(255, 255, 255, 0.87);
-            }
+          .detail-value {
+            color: rgba(255, 255, 255, 0.87);
           }
         }
       }
@@ -246,6 +244,7 @@ export class EventDetailDialogComponent {
       employees: Employee[];
       departments: Department[];
       currentUserId?: number;
+      currentEmployeeId?: number;
       onEdit: () => void;
       onDelete: () => void;
     },
@@ -254,17 +253,19 @@ export class EventDetailDialogComponent {
 
   canEditOrDelete(): boolean {
     const currentUserId = this.data.currentUserId;
-    if (!currentUserId) return false;
+    const currentEmployeeId = this.data.currentEmployeeId;
+    if (!currentUserId && !currentEmployeeId) return false;
     
-    // Ersteller kann immer bearbeiten/löschen
+    // Ersteller kann immer bearbeiten/löschen (created_by ist User-ID)
     if (this.data.event.created_by === currentUserId) {
       return true;
     }
     
-    // Wenn editable_by_attendees aktiviert ist und der Nutzer Teilnehmer ist
+    // Wenn editable_by_attendees aktiviert ist und der Nutzer Teilnehmer ist (attendees sind Employee-IDs)
     if (this.data.event.editable_by_attendees && 
         this.data.event.attendees && 
-        this.data.event.attendees.includes(currentUserId)) {
+        currentEmployeeId &&
+        this.data.event.attendees.includes(currentEmployeeId)) {
       return true;
     }
     

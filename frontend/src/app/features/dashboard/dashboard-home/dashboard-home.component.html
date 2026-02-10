@@ -119,6 +119,59 @@
         </div>
       </mat-card-content>
     </mat-card>
+
+    <!-- Krankmeldung abgeben -->
+    <mat-card class="stat-card clickable" (click)="openSickLeaveDialog()">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon sick">
+            <mat-icon>medical_services</mat-icon>
+          </div>
+          <span class="card-label">Krankmeldung</span>
+        </div>
+        <div class="stat-info">
+          <div class="action-content">
+            <mat-icon class="action-icon">add_circle_outline</mat-icon>
+            <p class="action-text">Krankmeldung abgeben</p>
+          </div>
+          <span class="stat-badge sick">Jetzt melden</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Feiertage & Urlaub (nächste 14 Tage) -->
+    <mat-card class="stat-card clickable" [class.empty]="!stats.nextHoliday && !stats.nextVacation" (click)="navigateTo('/calendar')">
+      <mat-card-content>
+        <div class="card-header">
+          <div class="stat-icon" [class.calendar]="stats.nextHoliday || stats.nextVacation" [class.neutral]="!stats.nextHoliday && !stats.nextVacation">
+            <mat-icon>{{ (stats.nextHoliday || stats.nextVacation) ? 'celebration' : 'event_available' }}</mat-icon>
+          </div>
+          <span class="card-label">Nächste 14 Tage</span>
+        </div>
+        <div class="stat-info" *ngIf="stats.nextHoliday || stats.nextVacation">
+          <div class="upcoming-items">
+            <div class="upcoming-item" *ngIf="stats.nextHoliday">
+              <mat-icon class="item-icon holiday">stars</mat-icon>
+              <div class="item-details">
+                <h4>{{ stats.nextHoliday }}</h4>
+                <p class="item-date">{{ stats.nextHolidayDate }}</p>
+              </div>
+            </div>
+            <div class="upcoming-item" *ngIf="stats.nextVacation">
+              <mat-icon class="item-icon vacation-icon">beach_access</mat-icon>
+              <div class="item-details">
+                <h4>{{ stats.nextVacation }}</h4>
+                <p class="item-date">{{ stats.nextVacationDate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="!stats.nextHoliday && !stats.nextVacation">
+          <mat-icon>event_available</mat-icon>
+          <p>Keine Feiertage oder Urlaub</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
   </div>
 
   <!-- Manager-Bereich -->
@@ -220,7 +273,6 @@
           </div>
           <div class="stat-info">
             <h3>{{ stats.pendingVacations || 0 }}</h3>
-            <p class="stat-description">{{ stats.approvedCount || 0 }} ✓ / {{ stats.rejectedCount || 0 }} ✗</p>
             <span class="stat-badge warning" *ngIf="stats.pendingVacations > 0">Genehmigung ausstehend</span>
             <span class="stat-badge neutral" *ngIf="stats.pendingVacations === 0">Keine offenen Anträge</span>
           </div>

@@ -1,7 +1,8 @@
-<h2 mat-dialog-title>{{ data.absence ? 'Abwesenheit bearbeiten' : 'Neue Abwesenheit' }}</h2>
+<h2 mat-dialog-title>{{ isSickReportMode ? 'Krankmeldung' : (data.absence ? 'Abwesenheit bearbeiten' : 'Neue Abwesenheit') }}</h2>
 <mat-dialog-content>
   <form [formGroup]="absenceForm">
-    <mat-form-field appearance="outline" class="full-width">
+    <!-- Mitarbeiter-Feld nur anzeigen wenn nicht im Krankmeldungs-Modus -->
+    <mat-form-field appearance="outline" class="full-width" *ngIf="!isSickReportMode">
       <mat-label>Mitarbeiter</mat-label>
       <mat-select formControlName="employee" required>
         <mat-option *ngFor="let emp of data.employees" [value]="emp.id">
@@ -13,7 +14,8 @@
       </mat-error>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
+    <!-- Abwesenheitstyp nur anzeigen wenn nicht im Krankmeldungs-Modus -->
+    <mat-form-field appearance="outline" class="full-width" *ngIf="!isSickReportMode">
       <mat-label>Abwesenheitstyp</mat-label>
       <mat-select formControlName="absence_type" required>
         <mat-option value="sick">Krank</mat-option>

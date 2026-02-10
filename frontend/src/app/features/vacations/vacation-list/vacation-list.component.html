@@ -1,7 +1,13 @@
 
     <div class="vacation-list">
       <div class="header">
-        <h1>Urlaub</h1>
+        <div class="header-title">
+          <h1>Urlaub</h1>
+          <span class="pending-badge" *ngIf="pendingVacations > 0" 
+                matTooltip="{{ pendingVacations }} ausstehende Anträge">
+            {{ pendingVacations }}
+          </span>
+        </div>
         <div class="header-actions">
           <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
             <mat-icon>info</mat-icon>
@@ -15,23 +21,14 @@
 
       <mat-card>
         <mat-card-content>
-          <mat-tab-group>
-            <!-- Urlaubsanträge Tab -->
-            <mat-tab>
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">beach_access</mat-icon>
-                Urlaubsanträge
-                <span class="badge" *ngIf="pendingVacations > 0">{{ pendingVacations }}</span>
-              </ng-template>
+          <app-loading-spinner *ngIf="loadingVacations"></app-loading-spinner>
 
-              <app-loading-spinner *ngIf="loadingVacations"></app-loading-spinner>
+          <div *ngIf="!loadingVacations && filteredVacationRequests.length === 0" class="empty-state">
+            <mat-icon>beach_access</mat-icon>
+            <p>Keine Urlaubsanträge vorhanden</p>
+          </div>
 
-              <div *ngIf="!loadingVacations && filteredVacationRequests.length === 0" class="empty-state">
-                <mat-icon>beach_access</mat-icon>
-                <p>Keine Urlaubsanträge vorhanden</p>
-              </div>
-
-              <table mat-table [dataSource]="filteredVacationRequests" *ngIf="!loadingVacations && filteredVacationRequests.length > 0" class="vacation-table">
+          <table mat-table [dataSource]="filteredVacationRequests" *ngIf="!loadingVacations && filteredVacationRequests.length > 0" class="vacation-table">
                 <ng-container matColumnDef="employee">
                   <th mat-header-cell *matHeaderCellDef>Mitarbeiter</th>
                   <td mat-cell *matCellDef="let request" class="clickable-cell" (click)="openCalendarView(request)">{{ request.employee_name }}</td>
@@ -102,8 +99,6 @@
                 <tr mat-row *matRowDef="let row; columns: vacationColumns;" 
                     [class.separator-row]="isFirstNonPendingRequest(row)"></tr>
               </table>
-            </mat-tab>
-          </mat-tab-group>
         </mat-card-content>
       </mat-card>
 

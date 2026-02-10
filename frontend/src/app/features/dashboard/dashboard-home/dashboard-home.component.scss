@@ -65,15 +65,88 @@
       opacity: 1;
     }
 
+    // Icon-spezifische Top-Border-Farben beim Hover
+    &:has(.stat-icon.primary):hover::before {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+
+    &:has(.stat-icon.success):hover::before {
+      background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    &:has(.stat-icon.vacation):hover::before {
+      background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    &:has(.stat-icon.warning):hover::before {
+      background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+    }
+
+    &:has(.stat-icon.danger):hover::before {
+      background: linear-gradient(90deg, #ff6b6b 0%, #ee5a6f 100%);
+    }
+
+    &:has(.stat-icon.sick):hover::before {
+      background: linear-gradient(90deg, #f44336 0%, #e91e63 100%);
+    }
+
+    &:has(.stat-icon.calendar):hover::before {
+      background: linear-gradient(90deg, #ff9800 0%, #ff5722 100%);
+    }
+
+    &:has(.stat-icon.overtime):hover::before {
+      background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
+    }
+
+    &:has(.stat-icon.neutral):hover::before {
+      background: linear-gradient(90deg, #e0e0e0 0%, #c0c0c0 100%);
+    }
+
     &.clickable {
       cursor: pointer;
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 
         .stat-value {
           color: var(--primary-color);
+        }
+
+        // Icon-spezifische Box-Shadows
+        &:has(.stat-icon.primary) {
+          box-shadow: 0 12px 32px rgba(102, 126, 234, 0.25);
+        }
+
+        &:has(.stat-icon.success) {
+          box-shadow: 0 12px 32px rgba(17, 153, 142, 0.25);
+        }
+
+        &:has(.stat-icon.vacation) {
+          box-shadow: 0 12px 32px rgba(240, 147, 251, 0.25);
+        }
+
+        &:has(.stat-icon.warning) {
+          box-shadow: 0 12px 32px rgba(250, 112, 154, 0.25);
+        }
+
+        &:has(.stat-icon.danger) {
+          box-shadow: 0 12px 32px rgba(255, 107, 107, 0.25);
+        }
+
+        &:has(.stat-icon.sick) {
+          box-shadow: 0 12px 32px rgba(244, 67, 54, 0.25);
+        }
+
+        &:has(.stat-icon.calendar) {
+          box-shadow: 0 12px 32px rgba(255, 152, 0, 0.25);
+        }
+
+        &:has(.stat-icon.overtime) {
+          box-shadow: 0 12px 32px rgba(255, 153, 102, 0.25);
+        }
+
+        &:has(.stat-icon.neutral) {
+          box-shadow: 0 12px 32px rgba(158, 158, 158, 0.25);
         }
       }
     }
@@ -154,8 +227,13 @@
       }
 
       &.sick {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        mat-icon { color: #ff6b6b; }
+        background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+        mat-icon { color: white; }
+      }
+
+      &.calendar {
+        background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+        mat-icon { color: white; }
       }
 
       &.overtime {
@@ -236,6 +314,93 @@
         &.neutral {
           background: rgba(158, 158, 158, 0.15);
           color: #616161;
+        }
+
+        &.sick {
+          background: rgba(244, 67, 54, 0.15);
+          color: #c62828;
+        }
+      }
+
+      .action-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin: 1rem 0;
+
+        .action-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          color: #f44336;
+          opacity: 0.8;
+        }
+
+        .action-text {
+          font-size: .9rem;
+          font-weight: 500;
+          color: #333;
+          margin: 0;
+          text-align: center;
+        }
+      }
+
+      .upcoming-items {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+
+        .upcoming-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          background: rgba(0, 0, 0, 0.02);
+          border-radius: 8px;
+          transition: background 0.2s ease;
+
+          &:hover {
+            background: rgba(0, 0, 0, 0.04);
+          }
+
+          .item-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+
+            &.holiday {
+              color: #ff9800;
+            }
+
+            &.vacation-icon {
+              color: #f093fb;
+            }
+          }
+
+          .item-details {
+            flex: 1;
+            min-width: 0;
+
+            h4 {
+              margin: 0 0 0.25rem 0;
+              font-size: 0.95rem;
+              font-weight: 600;
+              color: #1a1a1a;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            .item-date {
+              margin: 0;
+              font-size: 0.8rem;
+              color: #666;
+            }
+          }
         }
       }
 
@@ -497,6 +662,36 @@
 
         .stat-description {
           color: rgba(255, 255, 255, 0.7);
+        }
+
+        .action-content {
+          .action-text {
+            color: rgba(255, 255, 255, 0.9);
+          }
+
+          .action-icon {
+            color: #f44336;
+          }
+        }
+
+        .upcoming-items {
+          .upcoming-item {
+            background: rgba(255, 255, 255, 0.05);
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.08);
+            }
+
+            .item-details {
+              h4 {
+                color: #ffffff;
+              }
+
+              .item-date {
+                color: rgba(255, 255, 255, 0.6);
+              }
+            }
+          }
         }
 
         .progress-bar {
