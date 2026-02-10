@@ -23,6 +23,11 @@ class Organization(models.Model):
         verbose_name="Early-Access Kunde",
         help_text="Wenn aktiviert, erhält diese Organization dauerhaft die vergünstigten Early-Access Preise"
     )
+    is_trial = models.BooleanField(
+        default=True,
+        verbose_name="Ist Trial",
+        help_text="Wenn aktiviert, wird der Starter-Plan als kostenlose Testversion angezeigt"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
@@ -34,6 +39,24 @@ class Organization(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Aktualisiere Subscription-Daten wenn is_trial geändert wird"""
+        # Prüfe ob is_trial geändert wurde (nur bei existierenden Objekten)
+        if self.pk:
+            try:
+                old_instance = Organization.objects.get(pk=self.pk)
+                is_trial_changed = old_instance.is_trial != self.is_trial
+            except Organization.DoesNotExist:
+                is_trial_changed = False
+        else:
+            is_trial_changed = False
+        
+        super().save(*args, **kwargs)
+        
+        # Wenn is_trial geändert wurde und eine Subscription existiert, aktualisiere diese
+        if is_trial_changed and self.subscription:
+            self.subscription.save()  # Trigger die Subscription save() Methode
 
 
 class User(AbstractUser):

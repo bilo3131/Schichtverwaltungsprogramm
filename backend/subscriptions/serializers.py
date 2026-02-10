@@ -114,8 +114,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             if not organization.subscription:
                 return None
             
-            # Nur anzeigen wenn Organization's Subscription im Trial ist (Starter Tier)
-            if organization.subscription.tier != 'starter':
+            # Nur anzeigen wenn Organization im Trial ist
+            if not organization.is_trial:
                 return None  # Nur für Trial-User relevant
             
             # Prüfe ob Organization bereits Early-Access Kunde ist
@@ -134,11 +134,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             if not is_active:
                 return None  # Nur während aktiver Early-Access Phase zeigen
             
-            # Zähle nur Organisationen mit bezahltem Abo (Pro/Business), nicht Trial-User
-            current_count = Organization.objects.filter(
-                is_early_access=True,
-                subscription__tier__in=['pro', 'business']
-            ).count()
+            # Zähle alle Organisationen mit Early-Access Status (unabhängig vom Tier)
+            current_count = Organization.objects.filter(is_early_access=True).count()
             
             end_date = settings.get_end_date()
             

@@ -12,8 +12,8 @@
     <h2>Verfügbare Abonnements</h2>
     <div class="plans-grid">
       <!-- Starter Plan -->
-      <mat-card class="plan-card trial-plan" [class.current-plan]="subscription.tier === 'starter'">
-        <div class="trial-badge">Testversion</div>
+      <mat-card class="plan-card" [class.trial-plan]="limits?.pricing?.is_trial" [class.current-plan]="subscription.tier === 'starter'">
+        <div class="trial-badge" *ngIf="limits?.pricing?.is_trial">Testversion</div>
         <mat-card-header>
           <div class="plan-header">
             <mat-icon>rocket_launch</mat-icon>
@@ -22,12 +22,22 @@
           </div>
         </mat-card-header>
         <mat-card-content>
-          <div class="price-section">
+          <!-- Trial-Anzeige -->
+          <div class="price-section" *ngIf="limits?.pricing?.is_trial">
             <div class="trial-price">
               <span class="free-price">0€</span>
             </div>
             <div class="trial-period">14 Tage kostenlos testen</div>
             <div class="price-detail-note">Danach 29€/Monat + 2,00€ pro Mitarbeiter</div>
+          </div>
+          
+          <!-- Bezahlter Starter-Plan -->
+          <div class="price-section" *ngIf="!limits?.pricing?.is_trial">
+            <div class="plan-price">
+              <span class="price">29€</span>
+              <span class="period">/Monat</span>
+            </div>
+            <div class="price-detail">+ 2,00€ pro Mitarbeiter</div>
           </div>
           
           <ul class="features-list">
@@ -59,8 +69,7 @@
       </mat-card>
 
       <!-- Pro Plan -->
-      <mat-card class="plan-card featured disabled-plan" [class.current-plan]="subscription.tier === 'pro'">
-        <div class="coming-soon-badge">Bald verfügbar</div>
+      <mat-card class="plan-card featured" [class.current-plan]="subscription.tier === 'pro'">
         <mat-card-header>
           <div class="plan-header">
             <mat-icon>star</mat-icon>
@@ -90,15 +99,31 @@
           <button 
             mat-raised-button 
             color="primary"
-            disabled>
-            Benachrichtigen bei Verfügbarkeit
+            [disabled]="!canUpgrade('pro') && subscription.tier !== 'pro'"
+            (click)="upgradeTo('pro')"
+            *ngIf="canUpgrade('pro')">
+            Upgrade zu Pro
+          </button>
+          <button 
+            mat-raised-button 
+            [color]="subscription.tier === 'pro' ? 'accent' : 'primary'"
+            [disabled]="subscription.tier === 'pro'"
+            (click)="upgradeTo('pro')"
+            *ngIf="canDowngrade('pro')">
+            Downgrade zu Pro
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            disabled
+            *ngIf="subscription.tier === 'pro'">
+            Aktuelles Abonnement
           </button>
         </mat-card-content>
       </mat-card>
 
       <!-- Business Plan -->
-      <mat-card class="plan-card disabled-plan" [class.current-plan]="subscription.tier === 'business'">
-        <div class="coming-soon-badge">Bald verfügbar</div>
+      <mat-card class="plan-card" [class.current-plan]="subscription.tier === 'business'">
         <mat-card-header>
           <div class="plan-header">
             <mat-icon>business_center</mat-icon>
@@ -128,8 +153,25 @@
           <button 
             mat-raised-button 
             color="primary"
-            disabled>
-            Benachrichtigen bei Verfügbarkeit
+            [disabled]="!canUpgrade('business')"
+            (click)="upgradeTo('business')"
+            *ngIf="canUpgrade('business')">
+            Upgrade zu Business
+          </button>
+          <button 
+            mat-raised-button 
+            [color]="subscription.tier === 'business' ? 'accent' : 'primary'"
+            [disabled]="subscription.tier === 'business'"
+            (click)="upgradeTo('business')"
+            *ngIf="canDowngrade('business')">
+            Downgrade zu Business
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            disabled
+            *ngIf="subscription.tier === 'business'">
+            Aktuelles Abonnement
           </button>
         </mat-card-content>
       </mat-card>

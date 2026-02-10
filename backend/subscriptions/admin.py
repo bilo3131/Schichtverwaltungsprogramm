@@ -25,11 +25,8 @@ class EarlyAccessSettingsAdmin(admin.ModelAdmin):
     get_end_date.short_description = 'End-Datum'
     
     def get_current_count(self, obj):
-        # Zähle nur bezahlte Kunden (Pro/Business), nicht Trial-User
-        return Organization.objects.filter(
-            is_early_access=True,
-            subscription__tier__in=['pro', 'business']
-        ).count()
+        # Zähle alle Organizations mit Early-Access Status (unabhängig vom Tier)
+        return Organization.objects.filter(is_early_access=True).count()
     get_current_count.short_description = 'Aktuelle Early-Access Kunden'
     
     def early_access_status(self, obj):

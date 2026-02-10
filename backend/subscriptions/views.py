@@ -179,9 +179,24 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Hole die aktuelle Organization
+        organization = request.user.organization
+        if not organization:
+            return Response(
+                {'detail': 'Keine Organization gefunden.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Speichere den alten Tier für Downgrade-Prüfung
+        old_tier = subscription.tier
+        
+        # Prüfe, ob diese Subscription von mehreren Organizations verwendet wird
+        organizations_using_subscription = subscription.organizations.all()
+        subscription_is_shared = organizations_using_subscription.count() > 1
+        
         # Prüfe, ob es ein Downgrade ist und ob es möglich ist
         tier_order = {'starter': 1, 'pro': 2, 'business': 3}
-        is_downgrade = tier_order.get(subscription.tier, 0) > tier_order.get(new_tier, 0)
+        is_downgrade = tier_order.get(old_tier, 0) > tier_order.get(new_tier, 0)
         
         if is_downgrade:
             # Prüfe, ob die aktuellen Werte die neuen Limits überschreiten
@@ -191,8 +206,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'business': {'max_departments': -1, 'max_employees': -1}
             }
             
-            current_depts = subscription.get_current_department_count()
-            current_emps = subscription.get_current_employee_count()
+            current_depts = subscription.get_current_department_count(organization)
+            current_emps = subscription.get_current_employee_count(organization)
             new_max_depts = new_limits[new_tier]['max_departments']
             new_max_emps = new_limits[new_tier]['max_employees']
             
@@ -208,8 +223,77 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         
-        subscription.tier = new_tier
-        subscription.save()
+        # Setze is_trial auf False, wenn Plan gewechselt wird (außer im Admin Panel)
+        organization.is_trial = False
+        organization.save()
+        
+        # Wenn die Subscription geteilt wird, erstelle eine Kopie für diese Organization
+        if subscription_is_shared:
+            # Bestimme die Limits basierend auf dem neuen Tier
+            tier_limits = {
+                'starter': {'max_departments': 1, 'max_employees': 20, 'base_price': 29.00, 'price_per_employee': 2.00},
+                'pro': {'max_departments': 10, 'max_employees': 150, 'base_price': 59.00, 'price_per_employee': 1.50},
+                'business': {'max_departments': -1, 'max_employees': -1, 'base_price': 99.00, 'price_per_employee': 1.00}
+            }
+            limits = tier_limits.get(new_tier, tier_limits['starter'])
+            
+            # Bestimme price_cap für Business Tier
+            price_cap = None
+            if new_tier == 'business':
+                price_cap = 399.00 if organization.is_early_access else 499.00
+            
+            # Erstelle eine neue Subscription-Instanz mit den neuen Tier-Werten
+            from datetime import timedelta
+            from django.utils import timezone
+            today = timezone.now().date()
+            
+            new_subscription = Subscription.objects.create(
+                company_name=subscription.company_name,
+                tier=new_tier,
+                is_early_access=subscription.is_early_access,
+                max_departments=limits['max_departments'],
+                max_employees=limits['max_employees'],
+                base_price=limits['base_price'],
+                price_per_employee=limits['price_per_employee'],
+                price_cap=price_cap,
+                is_active=subscription.is_active,
+                trial_end_date=None,  # Kein Trial mehr
+                subscription_start_date=today,  # Neues Startdatum
+                subscription_end_date=today + timedelta(days=30)  # 30 Tage ab heute
+            )
+            # Weise die neue Subscription der Organization zu
+            organization.subscription = new_subscription
+            organization.save()
+            subscription = new_subscription
+        else:
+            # Nur diese Organization nutzt die Subscription, also können wir sie direkt ändern
+            # Aktualisiere auch die Tier-spezifischen Werte
+            tier_limits = {
+                'starter': {'max_departments': 1, 'max_employees': 20, 'base_price': 29.00, 'price_per_employee': 2.00},
+                'pro': {'max_departments': 10, 'max_employees': 150, 'base_price': 59.00, 'price_per_employee': 1.50},
+                'business': {'max_departments': -1, 'max_employees': -1, 'base_price': 99.00, 'price_per_employee': 1.00}
+            }
+            limits = tier_limits.get(new_tier, tier_limits['starter'])
+            
+            # Bestimme price_cap für Business Tier
+            price_cap = None
+            if new_tier == 'business':
+                price_cap = 399.00 if organization.is_early_access else 499.00
+            
+            # Setze neue Daten für monatliches Abo (30 Tage)
+            from datetime import timedelta
+            from django.utils import timezone
+            today = timezone.now().date()
+            
+            subscription.tier = new_tier
+            subscription.max_departments = limits['max_departments']
+            subscription.max_employees = limits['max_employees']
+            subscription.base_price = limits['base_price']
+            subscription.price_per_employee = limits['price_per_employee']
+            subscription.price_cap = price_cap
+            subscription.trial_end_date = None  # Kein Trial mehr
+            subscription.subscription_end_date = today + timedelta(days=30)  # 30 Tage ab heute
+            subscription.save()
         
         serializer = self.get_serializer(subscription)
         return Response(serializer.data)

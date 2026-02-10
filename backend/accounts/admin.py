@@ -1,12 +1,22 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django import forms
 from .models import User, Organization
+
+
+class OrganizationAdminForm(forms.ModelForm):
+    """Custom Form für Organization mit Trial Checkbox"""
+    
+    class Meta:
+        model = Organization
+        fields = '__all__'
 
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'subscription', 'is_early_access', 'get_employee_count', 'get_department_count', 'is_active', 'created_at']
-    list_filter = ['is_active', 'subscription', 'is_early_access']
+    form = OrganizationAdminForm
+    list_display = ['name', 'get_tier', 'is_trial', 'subscription', 'is_early_access', 'get_employee_count', 'get_department_count', 'is_active', 'created_at']
+    list_filter = ['is_active', 'subscription', 'is_early_access', 'is_trial']
     search_fields = ['name', 'email', 'phone']
     ordering = ['name']
     readonly_fields = ['created_at', 'updated_at', 'get_subscription_details']
@@ -16,13 +26,26 @@ class OrganizationAdmin(admin.ModelAdmin):
             'fields': ('name', 'address', 'phone', 'email')
         }),
         ('Subscription', {
-            'fields': ('subscription', 'is_early_access', 'get_subscription_details', 'is_active')
+            'fields': ('subscription', 'is_trial', 'is_early_access', 'get_subscription_details', 'is_active')
         }),
         ('Zeitstempel', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+    
+    def get_tier(self, obj):
+        """Zeigt den aktuellen Tier"""
+        if obj.subscription:
+            tier_icons = {
+                'starter': '🆓',
+                'pro': '⭐',
+                'business': '💼'
+            }
+            icon = tier_icons.get(obj.subscription.tier, '')
+            return f"{icon} {obj.subscription.get_tier_display()}"
+        return "—"
+    get_tier.short_description = 'Tier'
     
     def get_employee_count(self, obj):
         """Anzahl Mitarbeiter dieser Organization"""

@@ -276,24 +276,23 @@ class ShiftSerializer(serializers.ModelSerializer):
                     f"Der Mitarbeiter {attrs['employee'].user.get_full_name()} ist für diesen Zeitraum als abwesend gemeldet (Urlaub)."
                 )
         
-        # Prüfe ob Mitarbeiter eine Abwesenheit hat
+        # Prüfe ob Mitarbeiter eine Abwesenheit hat (außer Urlaubswunsch)
         if attrs.get('employee') and attrs.get('date'):
             from .models import AbsenceRecord
             shift_date = attrs['date']
             
-            # Prüfe auf Abwesenheiten für dieses Datum
+            # Prüfe auf Abwesenheiten für dieses Datum (Urlaubswunsch ausschließen)
             absence = AbsenceRecord.objects.filter(
                 employee=attrs['employee'],
                 start_date__lte=shift_date,
                 end_date__gte=shift_date
-            ).first()
+            ).exclude(absence_type='vacation_wish').first()  # Urlaubswunsch nicht blockieren
             
             if absence:
                 # Hole die Anzeigenamen für Abwesenheitstypen
                 absence_type_labels = {
                     'sick': '🤒 Krank',
                     'vacation': '🏖️ Urlaub',
-                    'vacation_wish': '❤️ Urlaubswunsch',
                     'kug': '🏢 KUG',
                     'other': '📅 Sonstiges'
                 }

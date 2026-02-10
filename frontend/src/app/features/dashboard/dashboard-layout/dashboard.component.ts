@@ -63,6 +63,7 @@ export class DashboardComponent implements OnInit {
   unreadCount = 0;
   currentTier: string = '';
   currentYear = new Date().getFullYear();
+  private tutorialShown = false; // Flag, um mehrfaches Öffnen zu verhindern
   
   get selectedDepartmentId(): number | 'all' {
     return this.dashboardFilterService.selectedDepartmentId$.value;
@@ -167,8 +168,9 @@ export class DashboardComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       
-      // Prüfe, ob Tutorial angezeigt werden soll
-      if (user && !user.tutorial_completed) {
+      // Prüfe, ob Tutorial angezeigt werden soll (nur einmal!)
+      if (user && !user.tutorial_completed && !this.tutorialShown) {
+        this.tutorialShown = true; // Setze Flag, um mehrfaches Öffnen zu verhindern
         this.showTutorial(user.role);
       }
       
@@ -195,6 +197,11 @@ export class DashboardComponent implements OnInit {
   }
 
   showTutorial(role: string): void {
+    // Prüfe, ob bereits ein Tutorial-Dialog geöffnet ist
+    if (this.dialog.openDialogs.some(dialog => dialog.componentInstance instanceof TutorialDialogComponent)) {
+      return; // Dialog ist bereits geöffnet, nicht nochmal öffnen
+    }
+    
     // Kleiner Delay, damit der User die UI kurz sieht
     setTimeout(() => {
       const dialogRef = this.dialog.open(TutorialDialogComponent, {

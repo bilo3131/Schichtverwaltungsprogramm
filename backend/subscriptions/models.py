@@ -43,12 +43,9 @@ class EarlyAccessSettings(models.Model):
         if timezone.now() > self.get_end_date():
             return False
         
-        # Prüfe Kundenlimit - zähle nur bezahlte Kunden (Pro/Business), nicht Trial-User
+        # Prüfe Kundenlimit - zähle alle Organizations mit Early-Access Status
         from accounts.models import Organization
-        early_access_count = Organization.objects.filter(
-            is_early_access=True,
-            subscription__tier__in=['pro', 'business']
-        ).count()
+        early_access_count = Organization.objects.filter(is_early_access=True).count()
         if early_access_count >= self.max_customers:
             return False
         
@@ -83,7 +80,7 @@ class Subscription(models.Model):
     
     # Preisgestaltung (wird automatisch gesetzt basierend auf Tier und Early-Access Status)
     base_price = models.DecimalField(max_digits=10, decimal_places=2, default=29.00)
-    price_per_employee = models.DecimalField(max_digits=10, decimal_places=2, default=1.50)
+    price_per_employee = models.DecimalField(max_digits=10, decimal_places=2, default=2.00)
     price_cap = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
@@ -117,6 +114,54 @@ class Subscription(models.Model):
     
     def __str__(self):
         return f"{self.company_name} - {self.get_tier_display()}"
+    
+    def save(self, *args, **kwargs):
+        """Setzt trial_end_date und subscription_end_date basierend auf is_trial der Organization"""
+        from datetime import timedelta
+        
+        # Speichere zuerst, damit self.pk existiert
+        super().save(*args, **kwargs)
+        
+        # Finde die Organization(en), die diese Subscription verwenden
+        from accounts.models import Organization
+        organizations = Organization.objects.filter(subscription=self)
+        
+        if organizations.exists():
+            # Nutze die erste Organization für is_trial Status
+            organization = organizations.first()
+            
+            needs_update = False
+            
+            if organization.is_trial:
+                # Trial: 14 Tage ab subscription_start_date
+                new_trial_end_date = self.subscription_start_date + timedelta(days=14)
+                if self.trial_end_date != new_trial_end_date or self.subscription_end_date != new_trial_end_date:
+                    self.trial_end_date = new_trial_end_date
+                    self.subscription_end_date = new_trial_end_date
+                    needs_update = True
+            else:
+                # Kein Trial: Monatlich kündbar (30 Tage)
+                if self.trial_end_date is not None:
+                    self.trial_end_date = None
+                    needs_update = True
+                
+                # Setze subscription_end_date auf 30 Tage nach Start, falls noch nicht gesetzt
+                from django.utils import timezone
+                today = timezone.now().date()
+                # Nutze das heutige Datum als Referenz, wenn es nach subscription_start_date liegt
+                reference_date = max(self.subscription_start_date, today)
+                expected_end_date = reference_date + timedelta(days=30)
+                
+                if not self.subscription_end_date or self.subscription_end_date < reference_date:
+                    self.subscription_end_date = expected_end_date
+                    needs_update = True
+            
+            if needs_update:
+                # Verhindere Rekursion durch direktes Update
+                Subscription.objects.filter(pk=self.pk).update(
+                    trial_end_date=self.trial_end_date,
+                    subscription_end_date=self.subscription_end_date
+                )
     
     def save(self, *args, **kwargs):
         # Bei neuer Subscription: Automatisch Early-Access Status setzen
@@ -235,8 +280,8 @@ class Subscription(models.Model):
     
     def get_limits_info(self, organization=None):
         """Gibt Informationen über aktuelle Nutzung und Limits zurück"""
-        # Für Trial-Modus: Starter ist kostenlos (0€), Pro und Business sind disabled
-        is_trial_mode = self.tier == SubscriptionTier.STARTER
+        # Für Trial-Modus: Starter ist kostenlos (0€), sonst normale Preise
+        is_trial_mode = organization and organization.is_trial if organization else False
         
         # Prüfe ob Organization Early-Access hat
         is_org_early_access = organization and organization.is_early_access

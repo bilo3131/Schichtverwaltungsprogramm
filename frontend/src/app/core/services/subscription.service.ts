@@ -155,7 +155,7 @@ export class SubscriptionService {
         basePrice: 0,
         pricePerEmployee: 0,
         originalBasePrice: 29,
-        originalPricePerEmployee: 1.50,
+        originalPricePerEmployee: 2.00,
         isTrial: true,
         features: [
           '1 Abteilung',
