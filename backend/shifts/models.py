@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from accounts.models import User, Organization
+from .constants import VacationRequestStatus, ShiftStatus, ShiftSwapRequestStatus, SystemDefaults
 
 
 class Department(models.Model):
@@ -187,11 +188,7 @@ class Availability(models.Model):
 
 class VacationRequest(models.Model):
     """Urlaubsanträge"""
-    STATUS_CHOICES = [
-        ('pending', 'Ausstehend'),
-        ('approved', 'Genehmigt'),
-        ('rejected', 'Abgelehnt'),
-    ]
+    STATUS_CHOICES = VacationRequestStatus.CHOICES
     
     employee = models.ForeignKey(
         Employee,
@@ -203,7 +200,7 @@ class VacationRequest(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending',
+        default=VacationRequestStatus.PENDING,
         verbose_name="Status"
     )
     notes = models.TextField(blank=True, verbose_name="Notizen")
@@ -247,7 +244,7 @@ class ShiftType(models.Model):
     end_time = models.TimeField(verbose_name="Endzeit")
     color = models.CharField(
         max_length=7,
-        default='#3498db',
+        default=SystemDefaults.DEFAULT_SHIFT_COLOR,
         verbose_name="Farbe (Hex)"
     )
     required_qualifications = models.ManyToManyField(
@@ -257,7 +254,7 @@ class ShiftType(models.Model):
         verbose_name="Erforderliche Qualifikationen"
     )
     min_employees = models.IntegerField(
-        default=1,
+        default=SystemDefaults.DEFAULT_MIN_EMPLOYEES_PER_SHIFT,
         validators=[MinValueValidator(1)],
         verbose_name="Mindestbesetzung"
     )
@@ -299,10 +296,11 @@ class ShiftType(models.Model):
     def calculate_night_hours(self):
         """Berechnet die Nachtarbeitsstunden (23:00-06:00 Uhr)"""
         from datetime import datetime, timedelta, time
+        from .constants import WorkingTimeRules
         
         # Definiere Nachtzeit: 23:00-06:00
-        night_start = time(23, 0)
-        night_end = time(6, 0)
+        night_start = time(WorkingTimeRules.NIGHT_SHIFT_START_HOUR, 0)
+        night_end = time(WorkingTimeRules.NIGHT_SHIFT_END_HOUR, 0)
         
         # Konvertiere zu datetime für einfachere Berechnungen
         base_date = datetime.today()
@@ -380,11 +378,7 @@ class ShiftType(models.Model):
 
 class Shift(models.Model):
     """Einzelne Schichten"""
-    STATUS_CHOICES = [
-        ('draft', 'Entwurf'),
-        ('published', 'Veröffentlicht'),
-        ('completed', 'Abgeschlossen'),
-    ]
+    STATUS_CHOICES = ShiftStatus.CHOICES
     
     organization = models.ForeignKey(
         Organization,
@@ -411,7 +405,7 @@ class Shift(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='draft',
+        default=ShiftStatus.DRAFT,
         verbose_name="Status"
     )
     notes = models.TextField(blank=True, verbose_name="Notizen")
@@ -450,11 +444,7 @@ class Shift(models.Model):
 
 class ShiftSwapRequest(models.Model):
     """Tauschwünsche zwischen Mitarbeitern"""
-    STATUS_CHOICES = [
-        ('pending', 'Ausstehend'),
-        ('approved', 'Genehmigt'),
-        ('rejected', 'Abgelehnt'),
-    ]
+    STATUS_CHOICES = ShiftSwapRequestStatus.CHOICES
     
     shift = models.ForeignKey(
         Shift,
@@ -477,7 +467,7 @@ class ShiftSwapRequest(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending',
+        default=ShiftSwapRequestStatus.PENDING,
         verbose_name="Status"
     )
     message = models.TextField(blank=True, verbose_name="Nachricht")

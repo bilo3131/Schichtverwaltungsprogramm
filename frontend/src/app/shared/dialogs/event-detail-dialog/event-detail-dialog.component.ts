@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Event, Employee, Department } from '../../../core/models';
 import { EventDialogComponent } from '../event-dialog/event-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 @Component({
   selector: 'app-event-detail-dialog',
@@ -248,7 +249,8 @@ export class EventDetailDialogComponent {
       onEdit: () => void;
       onDelete: () => void;
     },
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    public dateUtils: DateUtilsService
   ) {}
 
   canEditOrDelete(): boolean {
@@ -323,23 +325,11 @@ export class EventDetailDialogComponent {
   }
 
   formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return this.dateUtils.formatDateFromString(dateStr);
   }
 
   formatDateTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return this.dateUtils.formatDateTimeFromString(dateStr);
   }
 
   isSameDay(date1Str: string, date2Str: string): boolean {

@@ -18,8 +18,30 @@ export class TutorialService {
   private apiUrl = `${environment.apiUrl}/api/v1/accounts/users`;
   private tutorialCompletedSubject = new BehaviorSubject<boolean>(false);
   public tutorialCompleted$ = this.tutorialCompletedSubject.asObservable();
+  private tutorialShownInSession = false; // Globaler Flag für die gesamte Session
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Prüft, ob das Tutorial bereits in dieser Session gezeigt wurde
+   */
+  hasTutorialBeenShownInSession(): boolean {
+    return this.tutorialShownInSession;
+  }
+
+  /**
+   * Markiert das Tutorial als in dieser Session gezeigt
+   */
+  markTutorialAsShownInSession(): void {
+    this.tutorialShownInSession = true;
+  }
+
+  /**
+   * Setzt den Session-Flag zurück (z.B. bei User-Wechsel)
+   */
+  resetSessionFlag(): void {
+    this.tutorialShownInSession = false;
+  }
 
   /**
    * Markiert das Tutorial als abgeschlossen

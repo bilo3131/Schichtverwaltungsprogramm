@@ -16,6 +16,20 @@ import { NotificationService } from '../../../core/services/notification.service
 import { AbsenceDialogComponent } from '../../../shared/dialogs/absence-dialog/absence-dialog.component';
 import { forkJoin } from 'rxjs';
 
+// Constants
+const DASHBOARD_CONSTANTS = {
+  DEFAULT_VACATION_DAYS: 30,
+  UPCOMING_EVENTS_DAYS: 7,
+  UPCOMING_VACATION_DAYS: 14,
+  SICK_THRESHOLD_PERCENTAGE: 5,
+  HOURS_PER_WEEK: 40
+} as const;
+
+const DATE_FORMATS = {
+  TIME: { hour: '2-digit', minute: '2-digit' } as const,
+  DATE: { weekday: 'short', day: '2-digit', month: '2-digit' } as const
+} as const;
+
 interface DashboardStats {
   // Persönliche KPIs
   nextShift?: {
@@ -711,7 +725,7 @@ export class DashboardHomeComponent implements OnInit {
   getStartOfWeek(date: Date): string {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Montag
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
     d.setDate(diff);
     return d.toISOString().split('T')[0];
   }
@@ -719,29 +733,32 @@ export class DashboardHomeComponent implements OnInit {
   getEndOfWeek(date: Date): string {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? 0 : 7); // Sonntag
+    const diff = d.getDate() - day + (day === 0 ? 0 : 7); // Sunday
     d.setDate(diff);
     return d.toISOString().split('T')[0];
   }
 
-  getRelativeDate(date: Date): string {
-    const today = new Date();
-    const tomorrow = new Date(today);
+  private isToday(dateStr: string): boolean {
+    return dateStr === new Date().toISOString().split('T')[0];
+  }
+
+  private isTomorrow(dateStr: string): boolean {
+    const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
+    return dateStr === tomorrow.toISOString().split('T')[0];
+  }
 
+  getRelativeDate(date: Date): string {
     const dateStr = date.toISOString().split('T')[0];
-    const todayStr = today.toISOString().split('T')[0];
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    if (dateStr === todayStr) return 'Heute';
-    if (dateStr === tomorrowStr) return 'Morgen';
+    if (this.isToday(dateStr)) return 'Heute';
+    if (this.isTomorrow(dateStr)) return 'Morgen';
     
-    return date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    return date.toLocaleDateString('de-DE', DATE_FORMATS.DATE);
   }
 
   getCountdown(date: Date): string {
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
+    const diff = date.getTime() - new Date().getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
 
@@ -768,17 +785,56 @@ export class DashboardHomeComponent implements OnInit {
   formatOvertimeHours(hours: number): string {
     if (!hours || isNaN(hours)) return '0h 0min';
     
-    const isNegative = hours < 0;
     const absHours = Math.abs(hours);
     const h = Math.floor(absHours);
     const min = Math.round((absHours - h) * 60);
     
-    const sign = isNegative ? '-' : '+';
+    const sign = hours < 0 ? '-' : '+';
     return `${sign}${h}h ${min}min`;
   }
 
   navigateTo(route: string): void {
     this.router.navigate([route]);
+  }
+
+  private findEmployeeShifts(shifts: any[], employeeId: number): any[] {
+    return shifts.filter((s: any) => s.employee === employeeId);
+  }
+
+  private calculateWeeklyHours(shifts: any[], shiftTypes: any[]): number {
+    return shifts.reduce((sum: number, shift: any) => {
+      const shiftType = shiftTypes.find((st: any) => st.id === shift.shift_type);
+      if (!shiftType) return sum;
+      
+      return sum + this.calculateShiftDuration(
+        shiftType.start_time, 
+        shiftType.end_time, 
+        shiftType.break_duration || 0
+      );
+    }, 0);
+  }
+
+  calculateShiftDuration(startTime: string, endTime: string, breakDuration: number = 0): number {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    let hours = endHour - startHour;
+    let minutes = endMin - startMin;
+    
+    if (minutes < 0) {
+      hours--;
+      minutes += 60;
+    }
+    
+    // Handle overnight shifts
+    if (hours < 0) {
+      hours += 24;
+    }
+    
+    const totalHours = hours + (minutes / 60);
+    const breakHours = breakDuration / 60;
+    
+    return Math.max(0, totalHours - breakHours);
   }
 
   openSickLeaveDialog(): void {
@@ -843,29 +899,5 @@ export class DashboardHomeComponent implements OnInit {
         );
       }
     });
-  }
-
-  calculateShiftDuration(startTime: string, endTime: string, breakDuration: number = 0): number {
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    
-    let hours = endHour - startHour;
-    let minutes = endMin - startMin;
-    
-    if (minutes < 0) {
-      hours--;
-      minutes += 60;
-    }
-    
-    // Über Mitternacht
-    if (hours < 0) {
-      hours += 24;
-    }
-    
-    const totalHours = hours + (minutes / 60);
-    
-    // Pausenabzug direkt aus ShiftType (wurde bereits im Backend/Frontend bei Schichttyp-Erstellung berechnet)
-    const breakHours = breakDuration / 60; // break_duration ist in Minuten
-    return Math.max(0, totalHours - breakHours);
   }
 }

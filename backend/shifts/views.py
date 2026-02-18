@@ -18,7 +18,12 @@ from .serializers import (
     ShiftSwapRequestSerializer, AbsenceRecordSerializer,
     ShiftTemplateSerializer, ShiftTemplateEntrySerializer, NotificationSerializer, HolidaySerializer, EventSerializer
 )
+from .utils import PermissionHelpers
 from .email_service import send_bulk_shift_notifications
+from .constants import (
+    UserRoles, VacationRequestStatus, ShiftStatus, ShiftSwapRequestStatus,
+    WorkingTimeRules, SystemDefaults, ValidationMessages
+)
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -38,19 +43,16 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user
-        organization = user.organization
-        
-        if not organization:
-            raise PermissionDenied('Sie sind keiner Organisation zugeordnet.')
+        organization = PermissionHelpers.require_organization(user)
         
         # Subscription Limit prüfen
         if organization.subscription:
-            if not organization.subscription.can_add_department(organization):
-                max_depts = organization.subscription.max_departments
-                raise PermissionDenied(
-                    f'Ihr {organization.subscription.get_tier_display()} Plan erlaubt maximal {max_depts} Abteilung(en). '
-                    f'Bitte upgraden Sie Ihre Subscription.'
-                )
+            PermissionHelpers.check_subscription_limit(
+                organization.subscription,
+                organization,
+                organization.subscription.can_add_department,
+                'Abteilungen'
+            )
         
         serializer.save(organization=organization)
 
@@ -72,7 +74,7 @@ class QualificationViewSet(viewsets.ModelViewSet):
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    """ViewSet für Mitarbeiter"""
+    """ViewSet for employee management with role-based permissions"""
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated]
@@ -80,89 +82,91 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     ordering_fields = ['user__last_name', 'hire_date', 'employment_type']
     
-    def get_queryset(self):
-        user = self.request.user
-        if user.organization:
-            queryset = Employee.objects.filter(user__organization=user.organization)
-            
-            # Filter nach Abteilung
-            department_id = self.request.query_params.get('department')
-            if department_id:
-                queryset = queryset.filter(department_id=department_id)
-            
-            # Filter nach Beschäftigungsart
-            employment_type = self.request.query_params.get('employment_type')
-            if employment_type:
-                queryset = queryset.filter(employment_type=employment_type)
-            
-            # Filter nach aktiv/inaktiv
-            is_active = self.request.query_params.get('is_active')
-            if is_active is not None:
-                queryset = queryset.filter(is_active=is_active.lower() == 'true')
-            
-            return queryset
-        return Employee.objects.none()
+    def _apply_query_filters(self, queryset):
+        """Apply query parameter filters to queryset"""
+        department_id = self.request.query_params.get('department')
+        if department_id:
+            queryset = queryset.filter(department_id=department_id)
+        
+        employment_type = self.request.query_params.get('employment_type')
+        if employment_type:
+            queryset = queryset.filter(employment_type=employment_type)
+        
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        return queryset
     
-    def update(self, request, *args, **kwargs):
-        # Nur Admin und HR dürfen is_active ändern
-        if 'is_active' in request.data and request.user.role not in ['admin', 'hr']:
+    def get_queryset(self):
+        """Get filtered employee queryset for current user's organization"""
+        user = self.request.user
+        if not user.organization:
+            return Employee.objects.none()
+        
+        queryset = Employee.objects.filter(user__organization=user.organization)
+        return self._apply_query_filters(queryset)
+    
+    def _check_field_permission(self, field_name, error_message):
+        """Check if user has permission to modify specific field"""
+        if field_name in self.request.data and not PermissionHelpers.is_admin_or_hr(self.request.user):
             return Response(
-                {'error': 'Nur Administratoren und Personalwesen dürfen den Mitarbeiterstatus ändern'},
+                {'error': error_message},
                 status=status.HTTP_403_FORBIDDEN
             )
+        return None
+    
+    def _validate_update_permissions(self):
+        """Validate permissions for update operations"""
+        # Check is_active permission
+        response = self._check_field_permission(
+            'is_active',
+            'Nur Administratoren und Personalwesen dürfen den Mitarbeiterstatus ändern'
+        )
+        if response:
+            return response
         
-        # Nur Admin und HR dürfen Rollen ändern
-        if 'role' in request.data:
-            if request.user.role not in ['admin', 'hr']:
-                return Response(
-                    {'error': 'Nur Administratoren und Personalwesen dürfen Rollen zuweisen'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        # Check role permission
+        response = self._check_field_permission(
+            'role',
+            'Nur Administratoren und Personalwesen dürfen Rollen zuweisen'
+        )
+        return response
+    
+    def update(self, request, *args, **kwargs):
+        """Update employee with permission checks"""
+        permission_error = self._validate_update_permissions()
+        if permission_error:
+            return permission_error
         return super().update(request, *args, **kwargs)
     
     def partial_update(self, request, *args, **kwargs):
-        # Nur Admin und HR dürfen is_active ändern
-        if 'is_active' in request.data and request.user.role not in ['admin', 'hr']:
-            return Response(
-                {'error': 'Nur Administratoren und Personalwesen dürfen den Mitarbeiterstatus ändern'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        # Nur Admin und HR dürfen Rollen ändern
-        if 'role' in request.data:
-            if request.user.role not in ['admin', 'hr']:
-                return Response(
-                    {'error': 'Nur Administratoren und Personalwesen dürfen Rollen zuweisen'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
+        """Partial update employee with permission checks"""
+        permission_error = self._validate_update_permissions()
+        if permission_error:
+            return permission_error
         return super().partial_update(request, *args, **kwargs)
     
     def perform_create(self, serializer):
+        """Create employee with subscription limit validation"""
         user = self.request.user
-        organization = user.organization
+        organization = PermissionHelpers.require_organization(user)
         
-        if not organization:
-            raise PermissionDenied('Sie sind keiner Organisation zugeordnet.')
-        
-        # Subscription Limit prüfen
         if organization.subscription:
-            if not organization.subscription.can_add_employee(organization):
-                max_employees = organization.subscription.max_employees
-                raise PermissionDenied(
-                    f'Ihr {organization.subscription.get_tier_display()} Plan erlaubt maximal {max_employees} Mitarbeiter. '
-                    f'Bitte upgraden Sie Ihre Subscription.'
-                )
+            PermissionHelpers.check_subscription_limit(
+                organization.subscription,
+                organization,
+                organization.subscription.can_add_employee,
+                'Mitarbeiter'
+            )
         
         serializer.save()
     
     @action(detail=True, methods=['get'])
     def hours_summary(self, request, pk=None):
-        """Zusammenfassung der Arbeitsstunden für einen Mitarbeiter"""
+        """Get work hours summary for an employee within a date range"""
         employee = self.get_object()
         
-        # Parameter für Zeitraum
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
         
@@ -176,10 +180,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             employee=employee,
             date__gte=start_date,
             date__lte=end_date,
-            status='published'
+            status=ShiftStatus.PUBLISHED
         )
         
-        total_hours = sum([shift.get_duration_hours() for shift in shifts])
+        total_hours = sum(shift.get_duration_hours() for shift in shifts)
         
         return Response({
             'employee': EmployeeSerializer(employee).data,
@@ -188,22 +192,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             'total_shifts': shifts.count()
         })
     
+    def _generate_random_password(self, length=None):
+        """Generate a random password"""
+        import random
+        import string
+        if length is None:
+            length = SystemDefaults.DEFAULT_PASSWORD_LENGTH
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
-        """Passwort für einen Mitarbeiter zurücksetzen (nur Admin/HR)"""
-        if request.user.role not in ['admin', 'hr']:
+        """Reset password for an employee (admin/HR only)"""
+        if not PermissionHelpers.is_admin_or_hr(request.user):
             return Response(
-                {'error': 'Nur Administratoren und Personalwesen dürfen Passwörter zurücksetzen'},
+                {'error': ValidationMessages.ADMIN_HR_ONLY},
                 status=status.HTTP_403_FORBIDDEN
             )
         
         employee = self.get_object()
         user = employee.user
         
-        import random
-        import string
-        
-        new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        new_password = self._generate_random_password()
         user.set_password(new_password)
         user.save()
         
@@ -211,8 +220,29 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             'message': 'Passwort erfolgreich zurückgesetzt',
             'username': user.username,
             'new_password': new_password,
-            'employee_name': f"{user.first_name} {user.last_name}"
+            'employee_name': user.get_full_name()
         })
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete an employee and their associated user account (admin/HR only)"""
+        if not PermissionHelpers.is_admin_or_hr(request.user):
+            return Response(
+                {'error': ValidationMessages.ADMIN_HR_ONLY},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        employee = self.get_object()
+        user = employee.user
+        employee_name = user.get_full_name()
+        
+        # Delete employee and user account
+        employee.delete()
+        user.delete()
+        
+        return Response(
+            {'message': f'Mitarbeiter {employee_name} und zugehöriger User-Account wurden erfolgreich gelöscht'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 class AvailabilityViewSet(viewsets.ModelViewSet):
@@ -326,21 +356,21 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
         vacation_request = self.get_object()
         old_start_date = vacation_request.start_date
         old_end_date = vacation_request.end_date
-        was_approved = vacation_request.status == 'approved'
+        was_approved = vacation_request.status == VacationRequestStatus.APPROVED
         
         # Vorgesetzte können alle Anträge bearbeiten
-        is_supervisor = user.role in ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']
+        is_supervisor = UserRoles.is_supervisor_or_above(user.role)
         
         if not is_supervisor:
             # Mitarbeiter können nur eigene pending-Anträge bearbeiten
-            if user.role == 'employee':
+            if user.role == UserRoles.EMPLOYEE:
                 # Prüfe ob es der eigene Antrag ist
                 if vacation_request.employee.user != user:
                     raise PermissionDenied("Sie können nur Ihre eigenen Urlaubsanträge bearbeiten.")
                 
                 # Prüfe ob der Antrag noch pending ist
-                if vacation_request.status != 'pending':
-                    raise PermissionDenied("Sie können nur ausstehende Urlaubsanträge bearbeiten. Genehmigte oder abgelehnte Anträge können nur von Vorgesetzten geändert werden.")
+                if vacation_request.status != VacationRequestStatus.PENDING:
+                    raise PermissionDenied(ValidationMessages.MUST_BE_PENDING)
                 
                 # Mitarbeiter dürfen employee field nicht ändern
                 if 'employee' in serializer.validated_data:
@@ -360,7 +390,7 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
             ).delete()
             
             # Erstelle neues AbsenceRecord mit aktualisierten Daten, wenn noch genehmigt
-            if updated_vacation.status == 'approved':
+            if updated_vacation.status == VacationRequestStatus.APPROVED:
                 # Erstelle Notiz mit dem Namen der genehmigenden Person
                 approver_name = updated_vacation.approved_by.get_full_name() if updated_vacation.approved_by and updated_vacation.approved_by.get_full_name() else (updated_vacation.approved_by.username if updated_vacation.approved_by else 'Unbekannt')
                 AbsenceRecord.objects.create(
@@ -381,21 +411,21 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Vorgesetzte können alle Anträge löschen
-        is_supervisor = user.role in ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']
+        is_supervisor = UserRoles.is_supervisor_or_above(user.role)
         
         if not is_supervisor:
             # Mitarbeiter können nur eigene pending-Anträge löschen
-            if user.role == 'employee':
+            if user.role == UserRoles.EMPLOYEE:
                 # Prüfe ob es der eigene Antrag ist
                 if instance.employee.user != user:
                     raise PermissionDenied("Sie können nur Ihre eigenen Urlaubsanträge löschen.")
                 
                 # Prüfe ob der Antrag noch pending ist
-                if instance.status != 'pending':
-                    raise PermissionDenied("Sie können nur ausstehende Urlaubsanträge löschen. Genehmigte oder abgelehnte Anträge können nur von Vorgesetzten gelöscht werden.")
+                if instance.status != VacationRequestStatus.PENDING:
+                    raise PermissionDenied(ValidationMessages.MUST_BE_PENDING)
         
         # Wenn es ein genehmigter Urlaub ist, lösche auch das zugehörige AbsenceRecord
-        if instance.status == 'approved':
+        if instance.status == VacationRequestStatus.APPROVED:
             AbsenceRecord.objects.filter(
                 employee=instance.employee,
                 start_date=instance.start_date,
@@ -410,13 +440,13 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
         """Urlaubsantrag genehmigen"""
         vacation_request = self.get_object()
         
-        if request.user.role not in ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']:
+        if not UserRoles.is_supervisor_or_above(request.user.role):
             return Response(
-                {'error': 'Keine Berechtigung zum Genehmigen'},
+                {'error': ValidationMessages.PERMISSION_DENIED},
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        vacation_request.status = 'approved'
+        vacation_request.status = VacationRequestStatus.APPROVED
         vacation_request.approved_by = request.user
         vacation_request.save()
         
@@ -441,14 +471,14 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
         """Urlaubsantrag ablehnen - löscht auch das zugehörige AbsenceRecord falls vorhanden"""
         vacation_request = self.get_object()
         
-        if request.user.role not in ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']:
+        if not UserRoles.is_supervisor_or_above(request.user.role):
             return Response(
-                {'error': 'Keine Berechtigung zum Ablehnen'},
+                {'error': ValidationMessages.PERMISSION_DENIED},
                 status=status.HTTP_403_FORBIDDEN
             )
         
         # Wenn der Urlaub vorher genehmigt war, lösche das AbsenceRecord
-        if vacation_request.status == 'approved':
+        if vacation_request.status == VacationRequestStatus.APPROVED:
             AbsenceRecord.objects.filter(
                 employee=vacation_request.employee,
                 start_date=vacation_request.start_date,
@@ -456,7 +486,7 @@ class VacationRequestViewSet(viewsets.ModelViewSet):
                 absence_type='vacation'
             ).delete()
         
-        vacation_request.status = 'rejected'
+        vacation_request.status = VacationRequestStatus.REJECTED
         vacation_request.approved_by = request.user
         vacation_request.save()
         
@@ -485,24 +515,15 @@ class ShiftTypeViewSet(viewsets.ModelViewSet):
         return ShiftType.objects.none()
     
     def perform_create(self, serializer):
-        # Nur Nicht-Mitarbeiter können Schichttypen erstellen
-        if self.request.user.role == 'employee':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Mitarbeiter dürfen keine Schichttypen erstellen')
+        PermissionHelpers.require_non_employee_role(self.request.user, 'Schichttypen erstellen')
         serializer.save(organization=self.request.user.organization)
     
     def perform_update(self, serializer):
-        # Nur Nicht-Mitarbeiter können Schichttypen bearbeiten
-        if self.request.user.role == 'employee':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Mitarbeiter dürfen keine Schichttypen bearbeiten')
+        PermissionHelpers.require_non_employee_role(self.request.user, 'Schichttypen bearbeiten')
         serializer.save()
     
     def perform_destroy(self, instance):
-        # Nur Nicht-Mitarbeiter können Schichttypen löschen
-        if self.request.user.role == 'employee':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Mitarbeiter dürfen keine Schichttypen löschen')
+        PermissionHelpers.require_non_employee_role(self.request.user, 'Schichttypen löschen')
         instance.delete()
 
 
@@ -578,7 +599,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
                 organization=request.user.organization,
                 date__gte=week_start,
                 date__lte=week_end
-            ).update(status='draft')
+            ).update(status=ShiftStatus.DRAFT)
         
         return response
     
@@ -593,7 +614,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        shift.status = 'published'
+        shift.status = ShiftStatus.PUBLISHED
         shift.save()
         
         serializer = self.get_serializer(shift)
@@ -602,9 +623,9 @@ class ShiftViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def publish_week(self, request):
         """Schichtplan für eine Woche veröffentlichen und Mitarbeiter benachrichtigen"""
-        if request.user.role not in ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader']:
+        if not UserRoles.is_supervisor_or_above(request.user.role):
             return Response(
-                {'error': 'Keine Berechtigung zum Veröffentlichen'},
+                {'error': ValidationMessages.PERMISSION_DENIED},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -632,7 +653,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
             organization=request.user.organization,
             date__gte=start,
             date__lte=end,
-            status='published',
+            status=ShiftStatus.PUBLISHED,
             employee__isnull=False
         ).select_related('employee', 'shift_type')
         
@@ -667,10 +688,10 @@ class ShiftViewSet(viewsets.ModelViewSet):
             date__gte=start,
             date__lte=end
         )
-        all_shifts_in_week.update(status='draft')
+        all_shifts_in_week.update(status=ShiftStatus.DRAFT)
         
         # Dann nur die Schichten mit Mitarbeitern auf "published" setzen
-        updated_count = shifts.update(status='published')
+        updated_count = shifts.update(status=ShiftStatus.PUBLISHED)
         
         # Refresh shifts from DB to get updated status
         shifts = Shift.objects.filter(
@@ -678,7 +699,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
             date__gte=start,
             date__lte=end,
             employee__isnull=False,
-            status='published'
+            status=ShiftStatus.PUBLISHED
         ).select_related('employee', 'shift_type')
         
         # Mitarbeiter nach Schichten gruppieren und Änderungen erkennen
@@ -798,13 +819,13 @@ class ShiftViewSet(viewsets.ModelViewSet):
         previous_shift = Shift.objects.filter(
             employee=employee,
             date__lt=check_date,
-            status='published'
+            status=ShiftStatus.PUBLISHED
         ).order_by('-date', '-end_time').first()
         
         current_shift = Shift.objects.filter(
             employee=employee,
             date=check_date,
-            status='published'
+            status=ShiftStatus.PUBLISHED
         ).order_by('start_time').first()
         
         if previous_shift and current_shift:
@@ -813,10 +834,13 @@ class ShiftViewSet(viewsets.ModelViewSet):
             
             rest_hours = (curr_start - prev_end).total_seconds() / 3600
             
-            if rest_hours < 11:
+            if rest_hours < WorkingTimeRules.MINIMUM_REST_HOURS:
                 violations.append({
                     'type': 'rest_period',
-                    'message': f'Ruhezeit zu kurz: {rest_hours:.1f}h (min. 11h erforderlich)',
+                    'message': ValidationMessages.REST_PERIOD_VIOLATION.format(
+                        actual=f'{rest_hours:.1f}',
+                        required=WorkingTimeRules.MINIMUM_REST_HOURS
+                    ),
                     'severity': 'error'
                 })
         
@@ -828,7 +852,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
             employee=employee,
             date__gte=week_start,
             date__lte=week_end,
-            status='published'
+            status=ShiftStatus.PUBLISHED
         )
         
         week_hours = sum([shift.get_duration_hours() for shift in week_shifts])
@@ -887,7 +911,7 @@ class ShiftSwapRequestViewSet(viewsets.ModelViewSet):
         shift.employee = swap_request.target_employee
         shift.save()
         
-        swap_request.status = 'approved'
+        swap_request.status = ShiftSwapRequestStatus.APPROVED
         swap_request.approved_by = request.user
         swap_request.save()
         
@@ -974,7 +998,7 @@ class ShiftTemplateViewSet(viewsets.ModelViewSet):
                     date=current_date,
                     start_time=entry.shift_type.start_time,
                     end_time=entry.shift_type.end_time,
-                    status='draft',
+                    status=ShiftStatus.DRAFT,
                     created_by=request.user
                 )
                 created_shifts.append(shift)

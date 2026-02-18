@@ -13,6 +13,7 @@ import { Employee, Qualification, Department } from '../../../core/models';
 import { EmployeeService } from '../../../core/services/employee.service';
 import { DepartmentService } from '../../../core/services/department.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 const ROLE_HIERARCHY: Record<string, number> = {
   admin: 5,
@@ -22,6 +23,25 @@ const ROLE_HIERARCHY: Record<string, number> = {
   group_leader: 2,
   employee: 1
 };
+
+// Permission Helper Functions
+class EmployeePermissions {
+  static readonly ADMIN_ROLES = ['admin', 'hr'];
+  static readonly MANAGER_ROLES = ['admin', 'hr', 'department_manager'];
+  static readonly SUPERVISOR_ROLES = [...this.MANAGER_ROLES, 'team_leader', 'group_leader'];
+
+  static canEditWorkingHours(userRole: string): boolean {
+    return this.ADMIN_ROLES.includes(userRole);
+  }
+
+  static canEditRole(userRole: string): boolean {
+    return this.ADMIN_ROLES.includes(userRole);
+  }
+
+  static canEditAllFields(userRole: string): boolean {
+    return this.ADMIN_ROLES.includes(userRole);
+  }
+}
 
 @Component({
   selector: 'app-employee-dialog',
@@ -52,6 +72,7 @@ export class EmployeeDialogComponent {
     private employeeService: EmployeeService,
     private departmentService: DepartmentService,
     private authService: AuthService,
+    private dateUtils: DateUtilsService,
     public dialogRef: MatDialogRef<EmployeeDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { employee?: Employee }
   ) {
@@ -177,104 +198,71 @@ export class EmployeeDialogComponent {
       
       // Konvertiere Datum zu YYYY-MM-DD Format
       if (formValue.hire_date instanceof Date) {
-        const date = formValue.hire_date;
-        formValue.hire_date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        formValue.hire_date = this.dateUtils.formatDateISO(formValue.hire_date);
       }
       
       this.dialogRef.close(formValue);
     }
   }
   onDelete(): void {
-    // Optional: Bestätigungsdialog einbauen
     this.dialogRef.close({ delete: true });
-  }
-
-  canEditWorkingHours(): boolean {
-    const user = this.authService.currentUserValue;
-    if (!user) return false;
-    // Nur Admin und HR dürfen Wochenstunden bearbeiten
-    return ['admin', 'hr'].includes(user.role);
   }
 
   canEditEmployee(): boolean {
     const user = this.authService.currentUserValue;
     if (!user) return false;
-    // Beim Anlegen eines neuen Mitarbeiters immer erlauben
     if (!this.data.employee) return true;
     
     const employeeRole = this.data.employee.user_details?.role || 'employee';
     const isOwnProfile = user.employee_profile?.id === this.data.employee.id;
     
-    // Admin und HR können alle bearbeiten
-    if (user.role === 'admin' || user.role === 'hr') return true;
+    if (EmployeePermissions.ADMIN_ROLES.includes(user.role)) return true;
     
-    // Abteilungsleiter
     if (user.role === 'department_manager') {
-      // Kann Teamleiter, Gruppenleiter und Mitarbeiter bearbeiten
-      if (employeeRole === 'team_leader' || employeeRole === 'group_leader' || employeeRole === 'employee') return true;
-      // Kann eigenes Profil bearbeiten
-      if (isOwnProfile) return true;
-      return false;
+      return ['team_leader', 'group_leader', 'employee'].includes(employeeRole) || isOwnProfile;
     }
     
-    // Teamleiter und Gruppenleiter
-    if (user.role === 'team_leader' || user.role === 'group_leader') {
-      // Können Mitarbeiter bearbeiten
-      if (employeeRole === 'employee') return true;
-      // Können eigenes Profil bearbeiten
-      if (isOwnProfile) return true;
-      return false;
+    if (['team_leader', 'group_leader'].includes(user.role)) {
+      return employeeRole === 'employee' || isOwnProfile;
     }
     
     return false;
   }
 
   isLimitedEdit(): boolean {
-    // Diese Methode wird für die Felder nicht mehr benötigt, kann aber für Kompatibilität bleiben
     return !this.canEditEmployee();
+  }
+
+  canEditWorkingHours(): boolean {
+    const user = this.authService.currentUserValue;
+    return user ? EmployeePermissions.canEditWorkingHours(user.role) : false;
   }
 
   canEditRole(): boolean {
     const user = this.authService.currentUserValue;
-    if (!user) return false;
-    // Nur Admin und HR können Rollen zuweisen
-    return ['admin', 'hr'].includes(user.role);
+    return user ? EmployeePermissions.canEditRole(user.role) : false;
   }
 
   canEditAllFields(): boolean {
     const user = this.authService.currentUserValue;
-    if (!user) return false;
-    // Nur Admin und HR dürfen alle Felder bearbeiten
-    return ['admin', 'hr'].includes(user.role);
+    return user ? EmployeePermissions.canEditAllFields(user.role) : false;
   }
 
-  // Neue Methode: Prüft, ob Qualifikationen bearbeitet werden dürfen
   canEditQualifications(): boolean {
     const user = this.authService.currentUserValue;
     if (!user || !this.data.employee) return false;
     
-    // Admin und HR können immer Qualifikationen bearbeiten
-    if (['admin', 'hr'].includes(user.role)) return true;
+    if (EmployeePermissions.ADMIN_ROLES.includes(user.role)) return true;
     
     const employeeRole = this.data.employee.user_details?.role || 'employee';
     const isOwnProfile = user.employee_profile?.id === this.data.employee.id;
     
-    // Abteilungsleiter
     if (user.role === 'department_manager') {
-      // Kann Qualifikationen von Teamleiter, Gruppenleiter und Mitarbeiter bearbeiten
-      if (employeeRole === 'team_leader' || employeeRole === 'group_leader' || employeeRole === 'employee') return true;
-      // Kann eigene Qualifikationen bearbeiten
-      if (isOwnProfile) return true;
-      return false;
+      return ['team_leader', 'group_leader', 'employee'].includes(employeeRole) || isOwnProfile;
     }
     
-    // Teamleiter und Gruppenleiter
-    if (user.role === 'team_leader' || user.role === 'group_leader') {
-      // Können Qualifikationen von Mitarbeitern bearbeiten
-      if (employeeRole === 'employee') return true;
-      // Können eigene Qualifikationen bearbeiten
-      if (isOwnProfile) return true;
-      return false;
+    if (['team_leader', 'group_leader'].includes(user.role)) {
+      return employeeRole === 'employee' || isOwnProfile;
     }
     
     return false;

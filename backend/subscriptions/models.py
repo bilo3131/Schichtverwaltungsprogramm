@@ -2,8 +2,33 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
 from django.utils import timezone
+from decimal import Decimal
 
 User = get_user_model()
+
+
+# Constants for subscription management
+class SubscriptionConstants:
+    """Central configuration for subscription tiers and pricing"""
+    TRIAL_DAYS = 14
+    MONTHLY_SUBSCRIPTION_DAYS = 30
+    EARLY_ACCESS_DURATION_MONTHS = 6
+    EARLY_ACCESS_MAX_CUSTOMERS = 30
+    UNLIMITED_VALUE = -1
+    
+    # Tier configurations: (max_departments, max_employees, base_price, price_per_employee, price_cap)
+    TIER_CONFIG = {
+        'starter': (1, 20, Decimal('29.00'), Decimal('2.00'), None),
+        'pro': (10, 150, Decimal('59.00'), Decimal('1.50'), None),
+        'business': (UNLIMITED_VALUE, UNLIMITED_VALUE, Decimal('99.00'), Decimal('1.00'), Decimal('499.00')),
+    }
+    
+    # Early-Access pricing: (price_per_employee, price_cap)
+    EARLY_ACCESS_PRICING = {
+        'starter': (Decimal('1.50'), None),
+        'pro': (Decimal('1.00'), None),
+        'business': (Decimal('0.80'), Decimal('399.00')),
+    }
 
 
 class SubscriptionTier(models.TextChoices):
@@ -13,10 +38,19 @@ class SubscriptionTier(models.TextChoices):
 
 
 class EarlyAccessSettings(models.Model):
-    """Globale Early-Access Einstellungen (Singleton)"""
-    start_date = models.DateTimeField(default=timezone.now, verbose_name="Early-Access Startdatum")
-    duration_months = models.IntegerField(default=6, verbose_name="Dauer in Monaten")
-    max_customers = models.IntegerField(default=30, verbose_name="Maximale Kundenanzahl")
+    """Singleton configuration for early access program"""
+    start_date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Early-Access Startdatum"
+    )
+    duration_months = models.IntegerField(
+        default=SubscriptionConstants.EARLY_ACCESS_DURATION_MONTHS,
+        verbose_name="Dauer in Monaten"
+    )
+    max_customers = models.IntegerField(
+        default=SubscriptionConstants.EARLY_ACCESS_MAX_CUSTOMERS,
+        verbose_name="Maximale Kundenanzahl"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Early-Access aktiv")
     
     class Meta:
@@ -27,39 +61,36 @@ class EarlyAccessSettings(models.Model):
         return f"Early-Access (aktiv bis {self.get_end_date()} oder {self.max_customers} Kunden)"
     
     def get_end_date(self):
-        """Berechnet das End-Datum des Early-Access"""
+        """Calculate the end date of the early access program"""
         return self.start_date + timedelta(days=30 * self.duration_months)
     
-    def is_early_access_active(self):
-        """Prüft ob Early-Access noch läuft"""
-        if not self.is_active:
-            return False
-        
-        # Prüfe ob Early-Access bereits gestartet ist (nicht in der Zukunft)
+    def _is_within_time_limit(self):
+        """Check if early access is within time constraints"""
         if timezone.now() < self.start_date:
             return False
-        
-        # Prüfe Zeitlimit
-        if timezone.now() > self.get_end_date():
-            return False
-        
-        # Prüfe Kundenlimit - zähle alle Organizations mit Early-Access Status
+        return timezone.now() <= self.get_end_date()
+    
+    def _is_within_customer_limit(self):
+        """Check if early access customer limit hasn't been reached"""
         from accounts.models import Organization
         early_access_count = Organization.objects.filter(is_early_access=True).count()
-        if early_access_count >= self.max_customers:
+        return early_access_count < self.max_customers
+    
+    def is_early_access_active(self):
+        """Check if early access program is currently accepting new customers"""
+        if not self.is_active:
             return False
-        
-        return True
+        return self._is_within_time_limit() and self._is_within_customer_limit()
     
     def save(self, *args, **kwargs):
-        # Singleton Pattern - nur eine Instanz erlaubt
+        """Enforce singleton pattern - only one instance allowed"""
         if not self.pk and EarlyAccessSettings.objects.exists():
             raise ValueError('Es kann nur eine Early-Access Einstellung geben.')
         return super().save(*args, **kwargs)
 
 
 class Subscription(models.Model):
-    """Lizenz/Subscription für ein Unternehmen"""
+    """Subscription/License model for companies"""
     company_name = models.CharField(max_length=200)
     tier = models.CharField(
         max_length=20,
@@ -67,20 +98,19 @@ class Subscription(models.Model):
         default=SubscriptionTier.STARTER
     )
     
-    # Early-Access Flag (wird beim Erstellen gesetzt und bleibt dauerhaft)
     is_early_access = models.BooleanField(
         default=False,
         verbose_name="Early-Access Kunde",
         help_text="Kunden mit Early-Access bekommen dauerhaft reduzierte Preise"
     )
     
-    # Limits je nach Tier
+    # Tier-specific limits
     max_departments = models.IntegerField(default=1)
     max_employees = models.IntegerField(default=20)
     
-    # Preisgestaltung (wird automatisch gesetzt basierend auf Tier und Early-Access Status)
-    base_price = models.DecimalField(max_digits=10, decimal_places=2, default=29.00)
-    price_per_employee = models.DecimalField(max_digits=10, decimal_places=2, default=2.00)
+    # Pricing configuration
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('29.00'))
+    price_per_employee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('2.00'))
     price_cap = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
@@ -90,13 +120,12 @@ class Subscription(models.Model):
         help_text="Maximaler monatlicher Preis (nur für Business Tier)"
     )
     
-    # Status
+    # Status and dates
     is_active = models.BooleanField(default=True)
     trial_end_date = models.DateField(null=True, blank=True)
     subscription_start_date = models.DateField(auto_now_add=True)
     subscription_end_date = models.DateField(null=True, blank=True)
     
-    # Zugeordnete Admin-Benutzer (Owner)
     owner = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -115,155 +144,151 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.company_name} - {self.get_tier_display()}"
     
-    def save(self, *args, **kwargs):
-        """Setzt trial_end_date und subscription_end_date basierend auf is_trial der Organization"""
-        from datetime import timedelta
+    def _set_early_access_on_creation(self):
+        """Set early access status for new subscriptions"""
+        try:
+            early_settings = EarlyAccessSettings.objects.first()
+            if early_settings and early_settings.is_early_access_active():
+                self.is_early_access = True
+        except EarlyAccessSettings.DoesNotExist:
+            self.is_early_access = False
+    
+    def _apply_tier_configuration(self):
+        """Apply tier-specific limits and pricing"""
+        config = SubscriptionConstants.TIER_CONFIG.get(self.tier)
+        if config:
+            (
+                self.max_departments,
+                self.max_employees,
+                self.base_price,
+                self.price_per_employee,
+                self.price_cap
+            ) = config
+    
+    def _update_trial_dates(self, organization):
+        """Update trial and subscription end dates based on organization trial status"""
+        needs_update = False
         
-        # Speichere zuerst, damit self.pk existiert
-        super().save(*args, **kwargs)
+        if organization.is_trial:
+            new_trial_end = self.subscription_start_date + timedelta(
+                days=SubscriptionConstants.TRIAL_DAYS
+            )
+            if self.trial_end_date != new_trial_end or self.subscription_end_date != new_trial_end:
+                self.trial_end_date = new_trial_end
+                self.subscription_end_date = new_trial_end
+                needs_update = True
+        else:
+            if self.trial_end_date is not None:
+                self.trial_end_date = None
+                needs_update = True
+            
+            today = timezone.now().date()
+            reference_date = max(self.subscription_start_date, today)
+            expected_end_date = reference_date + timedelta(
+                days=SubscriptionConstants.MONTHLY_SUBSCRIPTION_DAYS
+            )
+            
+            if not self.subscription_end_date or self.subscription_end_date < reference_date:
+                self.subscription_end_date = expected_end_date
+                needs_update = True
         
-        # Finde die Organization(en), die diese Subscription verwenden
+        return needs_update
+    
+    def _update_dates_for_organizations(self):
+        """Update dates for all linked organizations"""
         from accounts.models import Organization
         organizations = Organization.objects.filter(subscription=self)
         
         if organizations.exists():
-            # Nutze die erste Organization für is_trial Status
             organization = organizations.first()
-            
-            needs_update = False
-            
-            if organization.is_trial:
-                # Trial: 14 Tage ab subscription_start_date
-                new_trial_end_date = self.subscription_start_date + timedelta(days=14)
-                if self.trial_end_date != new_trial_end_date or self.subscription_end_date != new_trial_end_date:
-                    self.trial_end_date = new_trial_end_date
-                    self.subscription_end_date = new_trial_end_date
-                    needs_update = True
-            else:
-                # Kein Trial: Monatlich kündbar (30 Tage)
-                if self.trial_end_date is not None:
-                    self.trial_end_date = None
-                    needs_update = True
-                
-                # Setze subscription_end_date auf 30 Tage nach Start, falls noch nicht gesetzt
-                from django.utils import timezone
-                today = timezone.now().date()
-                # Nutze das heutige Datum als Referenz, wenn es nach subscription_start_date liegt
-                reference_date = max(self.subscription_start_date, today)
-                expected_end_date = reference_date + timedelta(days=30)
-                
-                if not self.subscription_end_date or self.subscription_end_date < reference_date:
-                    self.subscription_end_date = expected_end_date
-                    needs_update = True
-            
-            if needs_update:
-                # Verhindere Rekursion durch direktes Update
+            if self._update_trial_dates(organization):
                 Subscription.objects.filter(pk=self.pk).update(
                     trial_end_date=self.trial_end_date,
                     subscription_end_date=self.subscription_end_date
                 )
     
     def save(self, *args, **kwargs):
-        # Bei neuer Subscription: Automatisch Early-Access Status setzen
-        if not self.pk:  # Nur bei Erstellung
-            try:
-                early_settings = EarlyAccessSettings.objects.first()
-                if early_settings and early_settings.is_early_access_active():
-                    self.is_early_access = True
-            except EarlyAccessSettings.DoesNotExist:
-                self.is_early_access = False
+        """
+        Save method combines all initialization and update logic:
+        - Set early access status for new subscriptions
+        - Apply tier-specific configuration
+        - Update trial/subscription dates
+        """
+        # For new subscriptions only
+        if not self.pk:
+            self._set_early_access_on_creation()
         
-        # Automatische Zuweisung der Limits und Standard-Preise basierend auf Tier
-        if self.tier == SubscriptionTier.STARTER:
-            self.max_departments = 1
-            self.max_employees = 20
-            self.base_price = 29.00
-            self.price_per_employee = 2.00  # Standard-Preis
-            self.price_cap = None
-            
-        elif self.tier == SubscriptionTier.PRO:
-            self.max_departments = 10
-            self.max_employees = 150
-            self.base_price = 59.00
-            self.price_per_employee = 1.50  # Standard-Preis
-            self.price_cap = None
-            
-        elif self.tier == SubscriptionTier.BUSINESS:
-            self.max_departments = -1  # -1 = unlimited
-            self.max_employees = -1    # -1 = unlimited
-            self.base_price = 99.00
-            self.price_per_employee = 1.00  # Standard-Preis
-            self.price_cap = 499.00  # Standard Price Cap
+        # Apply tier configuration
+        self._apply_tier_configuration()
         
+        # Save first to ensure pk exists
         super().save(*args, **kwargs)
+        
+        # Update dates after save (requires pk to exist)
+        self._update_dates_for_organizations()
+    
+    def _has_early_access(self, organization):
+        """Check if organization has early access pricing"""
+        return organization and organization.is_early_access
     
     def get_price_per_employee(self, organization=None):
-        """Gibt den Preis pro Mitarbeiter zurück - berücksichtigt Organization's Early-Access Status"""
-        # Prüfe ob Organization Early-Access hat
-        is_org_early_access = organization and organization.is_early_access
-        
-        if not is_org_early_access:
-            # Standard-Preis (bereits in price_per_employee gespeichert)
+        """Get price per employee considering organization's early access status"""
+        if not self._has_early_access(organization):
             return float(self.price_per_employee)
         
-        # Early-Access Preise
-        if self.tier == SubscriptionTier.STARTER:
-            return 1.50
-        elif self.tier == SubscriptionTier.PRO:
-            return 1.00
-        elif self.tier == SubscriptionTier.BUSINESS:
-            return 0.80
+        early_pricing = SubscriptionConstants.EARLY_ACCESS_PRICING.get(self.tier)
+        if early_pricing:
+            return float(early_pricing[0])
         
         return float(self.price_per_employee)
     
     def get_price_cap(self, organization=None):
-        """Gibt das Price Cap zurück - berücksichtigt Organization's Early-Access Status"""
-        is_org_early_access = organization and organization.is_early_access
-        
+        """Get price cap considering organization's early access status"""
         if self.tier == SubscriptionTier.BUSINESS:
-            if is_org_early_access:
-                return 399.00  # Early-Access Cap
-            else:
-                return 499.00  # Standard Cap
+            early_pricing = SubscriptionConstants.EARLY_ACCESS_PRICING.get(self.tier)
+            if self._has_early_access(organization) and early_pricing:
+                return float(early_pricing[1]) if early_pricing[1] else None
         
-        return self.price_cap
+        return float(self.price_cap) if self.price_cap else None
     
     def get_current_employee_count(self, organization=None):
-        """Anzahl der aktuell registrierten Mitarbeiter für eine Organisation"""
+        """Count active employees for an organization"""
         from shifts.models import Employee
+        queryset = Employee.objects.filter(is_active=True)
+        
         if organization:
-            # Zähle nur Mitarbeiter dieser Organization
-            return Employee.objects.filter(
-                user__organization=organization,
-                is_active=True
-            ).count()
-        # Fallback: Alle Mitarbeiter (für backwards compatibility)
-        return Employee.objects.filter(is_active=True).count()
+            queryset = queryset.filter(user__organization=organization)
+        
+        return queryset.count()
     
     def get_current_department_count(self, organization=None):
-        """Anzahl der aktuell erstellten Abteilungen für eine Organisation"""
+        """Count departments for an organization"""
         from shifts.models import Department
+        queryset = Department.objects.all()
+        
         if organization:
-            # Zähle nur Abteilungen dieser Organization
-            return Department.objects.filter(organization=organization).count()
-        # Fallback: Alle Abteilungen
-        return Department.objects.count()
+            queryset = queryset.filter(organization=organization)
+        
+        return queryset.count()
+    
+    def _is_unlimited(self, value):
+        """Check if value represents unlimited"""
+        return value == SubscriptionConstants.UNLIMITED_VALUE
     
     def can_add_employee(self, organization=None):
-        """Prüft, ob noch ein Mitarbeiter hinzugefügt werden kann"""
-        if self.max_employees == -1:  # unlimited
+        """Check if another employee can be added"""
+        if self._is_unlimited(self.max_employees):
             return True
         return self.get_current_employee_count(organization) < self.max_employees
     
     def can_add_department(self, organization=None):
-        """Prüft, ob noch eine Abteilung hinzugefügt werden kann"""
-        if self.max_departments == -1:  # unlimited
+        """Check if another department can be added"""
+        if self._is_unlimited(self.max_departments):
             return True
         return self.get_current_department_count(organization) < self.max_departments
     
     def calculate_monthly_cost(self, organization=None):
-        """Berechnet die monatlichen Kosten basierend auf aktueller Mitarbeiteranzahl"""
-        # Starter ist kostenlos während der Trial-Phase
+        """Calculate monthly cost based on current employee count"""
         if self.tier == SubscriptionTier.STARTER:
             return 0.00
         
@@ -271,39 +296,62 @@ class Subscription(models.Model):
         price_per_emp = self.get_price_per_employee(organization)
         total = float(self.base_price) + (employee_count * price_per_emp)
         
-        # Price Cap anwenden
         price_cap = self.get_price_cap(organization)
-        if price_cap and total > float(price_cap):
-            total = float(self.price_cap)
+        if price_cap and total > price_cap:
+            total = price_cap
         
         return round(total, 2)
     
-    def get_limits_info(self, organization=None):
-        """Gibt Informationen über aktuelle Nutzung und Limits zurück"""
-        # Für Trial-Modus: Starter ist kostenlos (0€), sonst normale Preise
-        is_trial_mode = organization and organization.is_trial if organization else False
+    def _calculate_savings_info(self, organization):
+        """Calculate early access savings information"""
+        if not self._has_early_access(organization):
+            return {
+                'is_early_access_customer': False,
+                'savings_per_employee': 0,
+                'standard_price_per_employee': 0,
+                'monthly_savings': 0,
+                'message': None
+            }
         
-        # Prüfe ob Organization Early-Access hat
-        is_org_early_access = organization and organization.is_early_access
+        standard_config = SubscriptionConstants.TIER_CONFIG.get(self.tier)
+        early_pricing = SubscriptionConstants.EARLY_ACCESS_PRICING.get(self.tier)
         
-        # Berechne Ersparnis wenn Early-Access
-        savings_per_employee = 0
-        standard_price_per_employee = 0
-        price_per_emp = self.get_price_per_employee(organization)
+        if not standard_config or not early_pricing:
+            return {}
         
-        if is_org_early_access:
-            if self.tier == SubscriptionTier.STARTER:
-                savings_per_employee = 0.50  # 2.00 - 1.50
-                standard_price_per_employee = 2.00
-            elif self.tier == SubscriptionTier.PRO:
-                savings_per_employee = 0.50  # 1.50 - 1.00
-                standard_price_per_employee = 1.50
-            elif self.tier == SubscriptionTier.BUSINESS:
-                savings_per_employee = 0.20  # 1.00 - 0.80
-                standard_price_per_employee = 1.00
+        standard_price = float(standard_config[3])
+        early_price = float(early_pricing[0])
+        savings_per_employee = standard_price - early_price
         
         employee_count = self.get_current_employee_count(organization)
         monthly_savings = savings_per_employee * employee_count if employee_count > 0 else 0
+        
+        return {
+            'is_early_access_customer': True,
+            'savings_per_employee': round(savings_per_employee, 2),
+            'standard_price_per_employee': round(standard_price, 2),
+            'monthly_savings': round(monthly_savings, 2),
+            'message': f'Sie sparen {monthly_savings:.2f}€/Monat' if monthly_savings > 0 else None
+        }
+    
+    def _get_pricing_info(self, organization, is_trial):
+        """Get pricing information considering trial status"""
+        price_per_emp = self.get_price_per_employee(organization)
+        
+        return {
+            'base_price': 0.00 if is_trial else float(self.base_price),
+            'price_per_employee': 0.00 if is_trial else price_per_emp,
+            'price_cap': self.get_price_cap(organization),
+            'monthly_cost': self.calculate_monthly_cost(organization),
+            'original_base_price': float(self.base_price),
+            'original_price_per_employee': float(self.price_per_employee),
+            'is_trial': is_trial
+        }
+    
+    def get_limits_info(self, organization=None):
+        """Get comprehensive information about subscription limits, usage, and pricing"""
+        is_trial = organization and organization.is_trial if organization else False
+        is_org_early_access = self._has_early_access(organization)
         
         return {
             'tier': self.tier,
@@ -313,31 +361,17 @@ class Subscription(models.Model):
             'departments': {
                 'current': self.get_current_department_count(organization),
                 'max': self.max_departments,
-                'unlimited': self.max_departments == -1,
+                'unlimited': self._is_unlimited(self.max_departments),
                 'can_add': self.can_add_department(organization)
             },
             'employees': {
                 'current': self.get_current_employee_count(organization),
                 'max': self.max_employees,
-                'unlimited': self.max_employees == -1,
+                'unlimited': self._is_unlimited(self.max_employees),
                 'can_add': self.can_add_employee(organization)
             },
-            'pricing': {
-                'base_price': 0.00 if is_trial_mode else float(self.base_price),
-                'price_per_employee': 0.00 if is_trial_mode else price_per_emp,
-                'price_cap': self.get_price_cap(organization),
-                'monthly_cost': self.calculate_monthly_cost(organization),
-                'original_base_price': float(self.base_price),
-                'original_price_per_employee': float(self.price_per_employee),
-                'is_trial': is_trial_mode
-            },
-            'early_access_savings': {
-                'is_early_access_customer': is_org_early_access,
-                'savings_per_employee': round(savings_per_employee, 2),
-                'standard_price_per_employee': round(standard_price_per_employee, 2),
-                'monthly_savings': round(monthly_savings, 2),
-                'message': f'Sie sparen {monthly_savings:.2f}€/Monat' if is_org_early_access and monthly_savings > 0 else None
-            },
+            'pricing': self._get_pricing_info(organization, is_trial),
+            'early_access_savings': self._calculate_savings_info(organization),
             'status': {
                 'is_active': self.is_active,
                 'trial_end_date': self.trial_end_date,

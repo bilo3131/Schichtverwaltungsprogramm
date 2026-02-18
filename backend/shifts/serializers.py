@@ -5,6 +5,46 @@ from .models import (
     ShiftTemplate, ShiftTemplateEntry, Notification, Holiday, Event
 )
 from accounts.serializers import UserSerializer
+from .constants import VacationRequestStatus
+
+
+# Constants
+class EmployeeConstants:
+    """Constants for employee management"""
+    DEFAULT_ROLE = 'employee'
+    DEFAULT_PASSWORD = 'Abc123'
+    USERNAME_REPLACEMENTS = {
+        'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss',
+        'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+        ' ': '.'
+    }
+
+
+def sanitize_username(text):
+    """Convert German umlauts and special characters for username"""
+    for old, new in EmployeeConstants.USERNAME_REPLACEMENTS.items():
+        text = text.replace(old, new)
+    return text
+
+
+def generate_unique_username(first_name, last_name, email):
+    """Generate a unique username from name or email"""
+    from accounts.models import User
+    
+    if first_name and last_name:
+        username_base = f"{first_name.lower()}.{last_name.lower()}"
+    else:
+        username_base = email.split('@')[0]
+    
+    username_base = sanitize_username(username_base)
+    username = username_base
+    
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{username_base}{counter}"
+        counter += 1
+    
+    return username
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -31,7 +71,7 @@ class QualificationSerializer(serializers.ModelSerializer):
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    """Serializer für Mitarbeiter"""
+    """Serializer for employee management with automatic user creation"""
     user_details = UserSerializer(source='user', read_only=True)
     department_details = DepartmentSerializer(source='department', read_only=True)
     qualification_details = QualificationSerializer(
@@ -41,12 +81,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
     )
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     
-    # Felder für die Benutzererstellung
+    # Write-only fields for user creation
     first_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
     email = serializers.EmailField(write_only=True, required=False)
-    
-    # Rolle des Users
     role = serializers.CharField(source='user.role', required=False)
     
     class Meta:
@@ -65,72 +103,80 @@ class EmployeeSerializer(serializers.ModelSerializer):
         }
     
     def validate(self, attrs):
-        # Bei einem UPDATE (partial=True) ist diese Validierung nicht nötig
-        # Wenn user nicht angegeben ist UND wir erstellen einen neuen Datensatz,
-        # müssen first_name, last_name und email vorhanden sein
+        """Validate that required fields for new user creation are present"""
         if not self.instance and not attrs.get('user'):
-            if not attrs.get('first_name') or not attrs.get('last_name') or not attrs.get('email'):
+            required_fields = ['first_name', 'last_name', 'email']
+            missing_fields = [f for f in required_fields if not attrs.get(f)]
+            
+            if missing_fields:
                 raise serializers.ValidationError(
-                    "Wenn kein User angegeben ist, müssen first_name, last_name und email angegeben werden."
+                    f"Wenn kein User angegeben ist, sind folgende Felder erforderlich: {', '.join(missing_fields)}"
                 )
         return attrs
     
-    def create(self, validated_data):
+    def _create_user_for_employee(self, first_name, last_name, email, role):
+        """Create a new user account for the employee"""
         from accounts.models import User
         from django.contrib.auth.hashers import make_password
         
+        username = generate_unique_username(first_name, last_name, email)
+        
+        return User.objects.create(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password=make_password(EmployeeConstants.DEFAULT_PASSWORD),
+            organization=self.context['request'].user.organization,
+            role=role
+        )
+    
+    def create(self, validated_data):
+        """Create employee with automatic user creation if needed"""
         first_name = validated_data.pop('first_name', '')
         last_name = validated_data.pop('last_name', '')
         email = validated_data.pop('email', '')
         
+        user_data = validated_data.pop('user', {})
+        role = user_data.get('role', EmployeeConstants.DEFAULT_ROLE)
+        
         if email:
-            username_base = f"{first_name.lower()}.{last_name.lower()}" if first_name and last_name else email.split('@')[0]
-            username_base = username_base.replace(' ', '.').replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')
-            username = username_base
-            
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{username_base}{counter}"
-                counter += 1
-            
-            default_password = 'Abc123'
-            
-            user = User.objects.create(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                password=make_password(default_password),
-                organization=self.context['request'].user.organization,
-                role='employee'
-            )
+            user = self._create_user_for_employee(first_name, last_name, email, role)
             validated_data['user'] = user
         
         return super().create(validated_data)
     
+    def _update_user_fields(self, user, first_name, last_name, email, role):
+        """Update user fields and return True if any changes were made"""
+        has_changes = False
+        
+        if first_name is not None:
+            user.first_name = first_name
+            has_changes = True
+        if last_name is not None:
+            user.last_name = last_name
+            has_changes = True
+        if email is not None:
+            user.email = email
+            has_changes = True
+        if role is not None:
+            user.role = role
+            has_changes = True
+        
+        return has_changes
+    
     def update(self, instance, validated_data):
-        # Aktualisiere User-Daten wenn vorhanden
+        """Update employee and associated user data"""
         first_name = validated_data.pop('first_name', None)
         last_name = validated_data.pop('last_name', None)
         email = validated_data.pop('email', None)
         
-        # Rolle aus user.role extrahieren
         user_data = validated_data.pop('user', {})
         role = user_data.get('role', None)
         
-        if first_name is not None:
-            instance.user.first_name = first_name
-        if last_name is not None:
-            instance.user.last_name = last_name
-        if email is not None:
-            instance.user.email = email
-        if role is not None:
-            instance.user.role = role
-        
-        if first_name or last_name or email or role:
+        if self._update_user_fields(instance.user, first_name, last_name, email, role):
             instance.user.save()
         
-        # Aktualisiere Employee
         return super().update(instance, validated_data)
 
 
@@ -266,7 +312,7 @@ class ShiftSerializer(serializers.ModelSerializer):
             # Prüfe auf genehmigte Urlaubsanträge für dieses Datum
             approved_vacation = VacationRequest.objects.filter(
                 employee=attrs['employee'],
-                status='approved',
+                status=VacationRequestStatus.APPROVED,
                 start_date__lte=shift_date,
                 end_date__gte=shift_date
             ).exists()

@@ -10,7 +10,13 @@ SECRET_KEY = 'WIRD_AUF_SERVER_ERSETZT'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['bilal-alac.de', 'www.bilal-alac.de', '91.99.205.96', 'localhost']
+ALLOWED_HOSTS = [
+    'schichtplan.bilal-alac.de', 
+    'bilal-alac.de',  # Fallback für Migration
+    'www.bilal-alac.de', 
+    '91.99.205.96', 
+    'localhost'
+]
 
 # Application definition
 INSTALLED_APPS = [

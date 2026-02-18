@@ -12,6 +12,7 @@ import { MatNativeDateModule, MAT_DATE_LOCALE, NativeDateAdapter, DateAdapter, M
 import { VacationRequest, Employee } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { EmployeeService } from '../../../core/services/employee.service';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 export const DE_DATE_FORMATS = {
   parse: {
@@ -75,6 +76,7 @@ export class VacationRequestDialogComponent implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private employeeService: EmployeeService,
+    private dateUtils: DateUtilsService,
     public dialogRef: MatDialogRef<VacationRequestDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { vacation?: VacationRequest; existingRequests?: VacationRequest[] } = {}
   ) {
@@ -150,7 +152,7 @@ export class VacationRequestDialogComponent implements OnInit {
       if (formValue.start_date instanceof Date) {
         startDate = new Date(formValue.start_date);
         startDate.setHours(0, 0, 0, 0);
-        formValue.start_date = this.formatDate(formValue.start_date);
+        formValue.start_date = this.dateUtils.formatDateISO(formValue.start_date);
       } else {
         startDate = new Date(formValue.start_date);
         startDate.setHours(0, 0, 0, 0);
@@ -159,7 +161,7 @@ export class VacationRequestDialogComponent implements OnInit {
       if (formValue.end_date instanceof Date) {
         endDate = new Date(formValue.end_date);
         endDate.setHours(0, 0, 0, 0);
-        formValue.end_date = this.formatDate(formValue.end_date);
+        formValue.end_date = this.dateUtils.formatDateISO(formValue.end_date);
       } else {
         endDate = new Date(formValue.end_date);
         endDate.setHours(0, 0, 0, 0);
@@ -206,12 +208,5 @@ export class VacationRequestDialogComponent implements OnInit {
       
       this.dialogRef.close(formValue);
     }
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 }

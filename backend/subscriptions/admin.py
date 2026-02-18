@@ -3,6 +3,12 @@ from .models import Subscription, EarlyAccessSettings
 from accounts.models import Organization
 
 
+class EarlyAccessAdminConstants:
+    """Constants for Early Access admin display"""
+    STATUS_ACTIVE = "🟢 Aktiv"
+    STATUS_ENDED = "🔴 Beendet"
+
+
 @admin.register(EarlyAccessSettings)
 class EarlyAccessSettingsAdmin(admin.ModelAdmin):
     list_display = ['start_date', 'duration_months', 'max_customers', 'is_active', 'get_current_count', 'early_access_status']
@@ -21,25 +27,28 @@ class EarlyAccessSettingsAdmin(admin.ModelAdmin):
     )
     
     def get_end_date(self, obj):
+        """Display calculated end date"""
         return obj.get_end_date()
     get_end_date.short_description = 'End-Datum'
     
     def get_current_count(self, obj):
-        # Zähle alle Organizations mit Early-Access Status (unabhängig vom Tier)
+        """Count all organizations with early access status"""
         return Organization.objects.filter(is_early_access=True).count()
     get_current_count.short_description = 'Aktuelle Early-Access Kunden'
     
     def early_access_status(self, obj):
+        """Display status with visual indicator"""
         is_active = obj.is_early_access_active()
-        return "🟢 Aktiv" if is_active else "🔴 Beendet"
+        return (EarlyAccessAdminConstants.STATUS_ACTIVE if is_active 
+                else EarlyAccessAdminConstants.STATUS_ENDED)
     early_access_status.short_description = 'Early-Access Status'
     
     def has_add_permission(self, request):
-        # Nur eine Instanz erlaubt (Singleton)
+        """Enforce singleton pattern - only one instance allowed"""
         return not EarlyAccessSettings.objects.exists()
     
     def has_delete_permission(self, request, obj=None):
-        # Nicht löschen erlauben
+        """Prevent deletion of settings"""
         return False
 
 

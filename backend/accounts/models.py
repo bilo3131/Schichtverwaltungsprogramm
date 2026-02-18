@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Organization(models.Model):
-    """Mandant/Unternehmen für Multi-Tenancy"""
+    """Organization/Company model for multi-tenancy"""
     
     name = models.CharField(max_length=255, verbose_name="Unternehmensname")
     address = models.TextField(blank=True, verbose_name="Adresse")
@@ -40,23 +40,30 @@ class Organization(models.Model):
     def __str__(self):
         return self.name
     
+    def _has_trial_status_changed(self):
+        """Check if is_trial field has changed"""
+        if not self.pk:
+            return False
+        
+        try:
+            old_instance = Organization.objects.get(pk=self.pk)
+            return old_instance.is_trial != self.is_trial
+        except Organization.DoesNotExist:
+            return False
+    
+    def _update_subscription_on_trial_change(self):
+        """Trigger subscription update when trial status changes"""
+        if self.subscription:
+            self.subscription.save()
+    
     def save(self, *args, **kwargs):
-        """Aktualisiere Subscription-Daten wenn is_trial geändert wird"""
-        # Prüfe ob is_trial geändert wurde (nur bei existierenden Objekten)
-        if self.pk:
-            try:
-                old_instance = Organization.objects.get(pk=self.pk)
-                is_trial_changed = old_instance.is_trial != self.is_trial
-            except Organization.DoesNotExist:
-                is_trial_changed = False
-        else:
-            is_trial_changed = False
+        """Save organization and trigger subscription update if trial status changed"""
+        is_trial_changed = self._has_trial_status_changed()
         
         super().save(*args, **kwargs)
         
-        # Wenn is_trial geändert wurde und eine Subscription existiert, aktualisiere diese
-        if is_trial_changed and self.subscription:
-            self.subscription.save()  # Trigger die Subscription save() Methode
+        if is_trial_changed:
+            self._update_subscription_on_trial_change()
 
 
 class User(AbstractUser):

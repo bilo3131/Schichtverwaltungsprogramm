@@ -63,7 +63,7 @@ export class DashboardComponent implements OnInit {
   unreadCount = 0;
   currentTier: string = '';
   currentYear = new Date().getFullYear();
-  private tutorialShown = false; // Flag, um mehrfaches Öffnen zu verhindern
+  private lastUserId: number | null = null; // Tracke die aktuelle User-ID
   
   get selectedDepartmentId(): number | 'all' {
     return this.dashboardFilterService.selectedDepartmentId$.value;
@@ -168,9 +168,22 @@ export class DashboardComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       
-      // Prüfe, ob Tutorial angezeigt werden soll (nur einmal!)
-      if (user && !user.tutorial_completed && !this.tutorialShown) {
-        this.tutorialShown = true; // Setze Flag, um mehrfaches Öffnen zu verhindern
+      // Wenn sich die User-ID ändert (neuer Login), setze Tutorial-Flag zurück
+      if (user && this.lastUserId !== null && this.lastUserId !== user.id) {
+        this.tutorialService.resetSessionFlag();
+      }
+      
+      // Aktualisiere die getrackte User-ID
+      if (user) {
+        this.lastUserId = user.id;
+      } else {
+        this.lastUserId = null;
+        this.tutorialService.resetSessionFlag(); // Bei Logout auch zurücksetzen
+      }
+      
+      // Prüfe, ob Tutorial angezeigt werden soll (nur einmal pro User-Session!)
+      if (user && !user.tutorial_completed && !this.tutorialService.hasTutorialBeenShownInSession()) {
+        this.tutorialService.markTutorialAsShownInSession();
         this.showTutorial(user.role);
       }
       
@@ -197,13 +210,13 @@ export class DashboardComponent implements OnInit {
   }
 
   showTutorial(role: string): void {
-    // Prüfe, ob bereits ein Tutorial-Dialog geöffnet ist
-    if (this.dialog.openDialogs.some(dialog => dialog.componentInstance instanceof TutorialDialogComponent)) {
-      return; // Dialog ist bereits geöffnet, nicht nochmal öffnen
-    }
-    
     // Kleiner Delay, damit der User die UI kurz sieht
     setTimeout(() => {
+      // Doppelte Sicherheit: Prüfe nochmal, ob bereits ein Tutorial-Dialog geöffnet ist
+      if (this.dialog.openDialogs.some(dialog => dialog.componentInstance instanceof TutorialDialogComponent)) {
+        return;
+      }
+      
       const dialogRef = this.dialog.open(TutorialDialogComponent, {
         data: { role },
         width: '650px',

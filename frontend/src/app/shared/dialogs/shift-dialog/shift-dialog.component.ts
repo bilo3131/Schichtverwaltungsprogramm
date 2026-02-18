@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { Shift, ShiftType, Employee } from '../../../core/models';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 @Component({
   selector: 'app-shift-dialog',
@@ -32,6 +33,7 @@ export class ShiftDialogComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private dateUtils: DateUtilsService,
     public dialogRef: MatDialogRef<ShiftDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: {
       shift?: Shift;
@@ -134,21 +136,7 @@ export class ShiftDialogComponent implements OnInit {
     const monday = this.getDateFromWeek(year, week, 1);
     const sunday = this.getDateFromWeek(year, week, 7);
     
-    return `${this.formatDate(monday)} - ${this.formatDate(sunday)}`;
-  }
-
-  formatDate(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  }
-
-  formatDateISO(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${this.dateUtils.formatDateDE(monday)} - ${this.dateUtils.formatDateDE(sunday)}`;
   }
 
   getSelectedDays(): number[] {
@@ -198,7 +186,7 @@ export class ShiftDialogComponent implements OnInit {
       
       for (const day of selectedDays) {
         const date = this.getDateFromWeek(year, week, day);
-        const dateStr = this.formatDateISO(date);
+        const dateStr = this.dateUtils.formatDateISO(date);
         
         for (const employeeId of employees) {
           // Prüfe ob Mitarbeiter bereits am selben Tag eingeteilt ist

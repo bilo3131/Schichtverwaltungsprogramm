@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MAT_DATE_LOCALE, NativeDateAdapter, DateAdapter, MAT_DATE_FORMATS } from '@angular/material/core';
 import { Employee, AbsenceRecord } from '../../../core/models';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 export const DE_DATE_FORMATS = {
   parse: {
@@ -67,6 +68,7 @@ export class AbsenceDialogComponent {
 
   constructor(
     private fb: FormBuilder,
+    private dateUtils: DateUtilsService,
     public dialogRef: MatDialogRef<AbsenceDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { absence?: AbsenceRecord, employees: Employee[], isSickReportMode?: boolean }
   ) {
@@ -107,11 +109,11 @@ export class AbsenceDialogComponent {
       
       // Format dates
       if (formValue.start_date instanceof Date) {
-        formValue.start_date = this.formatDate(formValue.start_date);
+        formValue.start_date = this.dateUtils.formatDateISO(formValue.start_date);
       }
       if (formValue.end_date) {
         if (formValue.end_date instanceof Date) {
-          formValue.end_date = this.formatDate(formValue.end_date);
+          formValue.end_date = this.dateUtils.formatDateISO(formValue.end_date);
         }
       } else {
         // Wenn kein Enddatum angegeben, entferne das Feld
@@ -120,12 +122,5 @@ export class AbsenceDialogComponent {
       
       this.dialogRef.close(formValue);
     }
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 }

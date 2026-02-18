@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import type { Event, EventType, Employee, Department } from '../../../core/models';
+import { DateUtilsService } from '../../../core/services/date-utils.service';
 
 export interface EventDialogData {
   event?: Event;
@@ -52,6 +53,7 @@ export class EventDialogComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EventDialogComponent>,
+    private dateUtils: DateUtilsService,
     @Inject(MAT_DIALOG_DATA) public data: EventDialogData
   ) {
     const now = new Date();
@@ -64,9 +66,9 @@ export class EventDialogComponent implements OnInit {
       description: [data.event?.description || ''],
       event_type: [data.event?.event_type || 'meeting', Validators.required],
       start_date: [data.event ? new Date(data.event.start_datetime) : startDate, Validators.required],
-      start_time: [data.initialStartTime || (data.event ? this.extractTime(data.event.start_datetime) : this.formatTimeForInput(now)), Validators.required],
+      start_time: [data.initialStartTime || (data.event ? this.extractTime(data.event.start_datetime) : this.dateUtils.formatTimeForInput(now)), Validators.required],
       end_date: [data.event ? new Date(data.event.end_datetime) : endDate, Validators.required],
-      end_time: [data.initialEndTime || (data.event ? this.extractTime(data.event.end_datetime) : this.formatTimeForInput(endDate)), Validators.required],
+      end_time: [data.initialEndTime || (data.event ? this.extractTime(data.event.end_datetime) : this.dateUtils.formatTimeForInput(endDate)), Validators.required],
       location: [data.event?.location || ''],
       is_all_day: [data.event?.is_all_day || false],
       editable_by_attendees: [data.event?.editable_by_attendees || false],
@@ -92,21 +94,11 @@ export class EventDialogComponent implements OnInit {
   }
 
   private extractTime(datetime: string): string {
-    const date = new Date(datetime);
-    return this.formatTimeForInput(date);
-  }
-
-  private formatTimeForInput(date: Date): string {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return this.dateUtils.extractTime(datetime);
   }
 
   private combineDateAndTime(date: Date, time: string): string {
-    const [hours, minutes] = time.split(':');
-    const combined = new Date(date);
-    combined.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    return combined.toISOString();
+    return this.dateUtils.combineDateAndTime(date, time);
   }
 
   onSave(): void {
