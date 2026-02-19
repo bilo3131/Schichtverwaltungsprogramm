@@ -17,6 +17,7 @@ export class AuthService {
     login: `${this.API_BASE_URL}/login/`,
     logout: `${this.API_BASE_URL}/logout/`,
     register: `${this.API_BASE_URL}/register/`,
+    demoLogin: `${this.API_BASE_URL}/demo-login/`,
     changePassword: `${this.API_BASE_URL}/users/change_password/`,
     currentUser: `${this.API_BASE_URL}/users/me/`
   } as const;
@@ -92,6 +93,27 @@ export class AuthService {
     );
   }
 
+  demoLogin(email: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(this.ENDPOINTS.demoLogin, { email }).pipe(
+      tap(response => {
+        if (this.isBrowser) {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+          if ((response as any).is_demo) {
+            localStorage.setItem('is_demo', 'true');
+          }
+        }
+        this.currentUserSubject.next(response.user);
+        this.themeService.loadUserTheme(response.user.theme_preference);
+        this.setDepartmentFilter(response.user);
+      })
+    );
+  }
+
+  get isDemo(): boolean {
+    return this.isBrowser ? localStorage.getItem('is_demo') === 'true' : false;
+  }
+
   register(userData: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(this.ENDPOINTS.register, userData).pipe(
       tap(response => {
@@ -142,6 +164,7 @@ export class AuthService {
     if (this.isBrowser) {
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('is_demo');
     }
     this.currentUserSubject.next(null);
   }

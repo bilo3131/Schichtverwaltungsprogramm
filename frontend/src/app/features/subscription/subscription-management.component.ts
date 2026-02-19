@@ -54,20 +54,38 @@ export class SubscriptionManagementComponent implements OnInit {
   upgradeTo(tier: 'starter' | 'pro' | 'business'): void {
     if (!this.subscription) return;
 
-    this.subscriptionService.upgrade(this.subscription.id, tier).subscribe({
-      next: () => {
-        this.snackBar.open('Abonnement erfolgreich aktualisiert!', 'Schließen', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
-        this.loadSubscription();
+    // Für Starter-Downgrade: direkte API-Anfrage ohne Stripe
+    if (tier === 'starter') {
+      this.subscriptionService.upgrade(this.subscription.id, tier).subscribe({
+        next: () => {
+          this.snackBar.open('Abonnement erfolgreich aktualisiert!', 'Schließen', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+          this.loadSubscription();
+        },
+        error: (error) => {
+          this.snackBar.open(
+            error.error?.detail || 'Fehler beim Downgrade',
+            'Schließen',
+            { duration: 5000, panelClass: ['error-snackbar'] }
+          );
+        }
+      });
+      return;
+    }
+
+    // Für Pro und Business: Stripe Checkout starten
+    this.subscriptionService.createCheckoutSession(tier).subscribe({
+      next: (response) => {
+        window.location.href = response.checkout_url;
       },
       error: (error) => {
-        this.snackBar.open(
-          error.error?.detail || 'Fehler beim Upgrade',
-          'Schließen',
-          { duration: 5000, panelClass: ['error-snackbar'] }
-        );
+        const message = error.error?.detail || 'Fehler beim Starten der Zahlung. Bitte versuche es erneut.';
+        this.snackBar.open(message, 'Schließen', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }

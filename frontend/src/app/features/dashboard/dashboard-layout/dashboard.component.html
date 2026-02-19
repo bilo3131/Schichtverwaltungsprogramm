@@ -108,6 +108,15 @@
   </mat-menu>
 </mat-toolbar>
 
+<!-- Demo-Modus Banner -->
+<div class="demo-banner" *ngIf="authService.isDemo">
+  <mat-icon>info</mat-icon>
+  <span>Demo-Modus &mdash; Alle Daten werden täglich um 2 Uhr zurückgesetzt.</span>
+  <button mat-button routerLink="/subscription" class="demo-upgrade-btn">
+    Jetzt upgraden
+  </button>
+</div>
+
 <mat-sidenav-container class="sidenav-container">
   <mat-sidenav 
     #sidenav 

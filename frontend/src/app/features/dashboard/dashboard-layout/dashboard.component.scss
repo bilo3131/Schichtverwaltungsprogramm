@@ -5,6 +5,39 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ff9800;
+  color: #fff;
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  position: sticky;
+  top: 64px;
+  z-index: 999;
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
+
+  span {
+    flex: 1;
+  }
+
+  .demo-upgrade-btn {
+    color: #fff;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 4px;
+    padding: 2px 12px;
+    min-height: 28px;
+    line-height: 28px;
+  }
+}
+
 .app-title {
   font-size: 1.2rem;
   font-weight: 500;

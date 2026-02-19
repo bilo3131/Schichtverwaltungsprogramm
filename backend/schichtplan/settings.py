@@ -179,6 +179,14 @@ CSRF_TRUSTED_ORIGINS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Frontend URL (für Stripe Redirect-URLs)
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+# Stripe Configuration
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
 # Email Configuration
 # Verwendet .env Datei für Production, Console Backend für Development
 if os.environ.get('EMAIL_HOST'):

@@ -28,6 +28,23 @@ class Organization(models.Model):
         verbose_name="Ist Trial",
         help_text="Wenn aktiviert, wird der Starter-Plan als kostenlose Testversion angezeigt"
     )
+    is_demo = models.BooleanField(
+        default=False,
+        verbose_name="Demo-Organisation",
+        help_text="Demo-Organisationen werden täglich zurückgesetzt und dienen der Portfolio-Präsentation"
+    )
+    stripe_customer_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="Stripe Kunden-ID"
+    )
+    stripe_subscription_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name="Stripe Abonnement-ID"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")

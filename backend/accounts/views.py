@@ -3,10 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import Organization, User
 from .serializers import (
     OrganizationSerializer, UserSerializer, UserRegistrationSerializer,
@@ -145,7 +148,7 @@ class LoginView(generics.GenericAPIView):
 class LogoutView(generics.GenericAPIView):
     """View für Logout"""
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         try:
             # Lösche nur Token - keine Session
@@ -159,4 +162,91 @@ class LogoutView(generics.GenericAPIView):
                 {'message': 'Logout erfolgreich.'},
                 status=status.HTTP_200_OK
             )
+
+
+DEMO_MASTER_USERNAME = "demo_master"
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DemoLoginView(APIView):
+    """
+    Erstellt einen temporären Demo-Zugang für die angegebene E-Mail-Adresse.
+
+    POST /api/v1/accounts/demo-login/
+    Body: { "email": "user@example.com" }
+    Returns: { "token": "...", "user": {...}, "message": "..." }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email", "").strip()
+
+        # E-Mail validieren
+        if not email:
+            return Response(
+                {"error": "E-Mail-Adresse ist erforderlich."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            validate_email(email)
+        except DjangoValidationError:
+            return Response(
+                {"error": "Ungültige E-Mail-Adresse."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Demo-Organisation suchen
+        try:
+            demo_org = Organization.objects.get(is_demo=True, is_active=True)
+        except Organization.DoesNotExist:
+            return Response(
+                {"error": "Demo nicht verfügbar. Bitte kontaktiere den Support."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Demo-User für diese E-Mail finden oder erstellen
+        # Username aus E-Mail ableiten (sanitized)
+        base_username = f"demo_{email.split('@')[0].lower()[:30]}"
+        # Sonderzeichen entfernen
+        import re
+        safe_username = re.sub(r'[^a-z0-9_]', '_', base_username)
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            organization=demo_org,
+            defaults={
+                "username": self._unique_username(safe_username),
+                "first_name": email.split("@")[0].capitalize(),
+                "last_name": "(Demo)",
+                "role": "admin",
+                "tutorial_completed": True,
+            }
+        )
+
+        if not created:
+            # Stelle sicher, dass der User noch zur Demo-Org gehört
+            user.organization = demo_org
+            user.role = "admin"
+            user.save(update_fields=["organization", "role"])
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response(
+            {
+                "token": token.key,
+                "user": UserSerializer(user).data,
+                "message": "Demo-Login erfolgreich. Daten werden täglich um 2 Uhr zurückgesetzt.",
+                "is_demo": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _unique_username(self, base_username):
+        """Generates a unique username, appending a number if necessary."""
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+        return username
 

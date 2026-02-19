@@ -12,3 +12,4 @@ platformdirs==4.3.6
 sqlparse==0.5.3
 tzdata==2025.2
 virtualenv==20.28.0
+stripe>=7.0.0

@@ -348,6 +348,18 @@ class Subscription(models.Model):
             'is_trial': is_trial
         }
     
+    def is_expired(self, organization=None):
+        """Check if trial or subscription has expired"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        is_trial = organization and organization.is_trial if organization else False
+
+        if is_trial and self.trial_end_date:
+            return today > self.trial_end_date
+        if self.subscription_end_date:
+            return today > self.subscription_end_date
+        return False
+
     def get_limits_info(self, organization=None):
         """Get comprehensive information about subscription limits, usage, and pricing"""
         is_trial = organization and organization.is_trial if organization else False
@@ -374,7 +386,81 @@ class Subscription(models.Model):
             'early_access_savings': self._calculate_savings_info(organization),
             'status': {
                 'is_active': self.is_active,
+                'is_expired': self.is_expired(organization),
                 'trial_end_date': self.trial_end_date,
                 'subscription_end_date': self.subscription_end_date
             }
         }
+
+
+class PaymentRecord(models.Model):
+    """Aufzeichnung von Stripe-Zahlungen"""
+    STATUS_CHOICES = [
+        ('pending', 'Ausstehend'),
+        ('succeeded', 'Erfolgreich'),
+        ('failed', 'Fehlgeschlagen'),
+        ('canceled', 'Storniert'),
+        ('refunded', 'Erstattet'),
+    ]
+
+    organization = models.ForeignKey(
+        'accounts.Organization',
+        on_delete=models.CASCADE,
+        related_name='payment_records',
+        verbose_name="Organisation"
+    )
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_records',
+        verbose_name="Subscription"
+    )
+    stripe_payment_intent_id = models.CharField(
+        max_length=255,
+        verbose_name="Stripe Payment Intent ID"
+    )
+    stripe_checkout_session_id = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Stripe Checkout Session ID"
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Betrag"
+    )
+    currency = models.CharField(
+        max_length=3,
+        default='eur',
+        verbose_name="Währung"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Status"
+    )
+    tier = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Abonniertes Tier"
+    )
+    billing_period_start = models.DateField(
+        verbose_name="Abrechnungsbeginn"
+    )
+    billing_period_end = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Abrechnungsende"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zahlungsaufzeichnung"
+        verbose_name_plural = "Zahlungsaufzeichnungen"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.organization} - {self.amount}€ ({self.get_status_display()})"

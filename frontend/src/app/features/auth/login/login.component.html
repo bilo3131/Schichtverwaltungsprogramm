@@ -37,15 +37,29 @@
           </mat-error>
         </mat-form-field>
 
-        <button 
-          mat-raised-button 
-          color="primary" 
-          type="submit" 
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
           class="full-width"
           [disabled]="loginForm.invalid || loading">
           Anmelden
         </button>
       </form>
+
+      <div class="demo-section" *ngIf="!loading">
+        <mat-divider class="demo-divider"></mat-divider>
+        <p class="demo-label">Kein Konto? Einfach ausprobieren:</p>
+        <button
+          mat-stroked-button
+          color="accent"
+          class="full-width demo-button"
+          type="button"
+          (click)="openDemoDialog()">
+          <mat-icon>play_circle_outline</mat-icon>
+          Demo starten
+        </button>
+      </div>
     </mat-card-content>
   </mat-card>
   

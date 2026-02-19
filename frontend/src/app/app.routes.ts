@@ -72,6 +72,10 @@ export const routes: Routes = [
         canActivate: [roleGuardFactory(['admin', 'hr'])]
       },
       {
+        path: 'subscription/success',
+        loadComponent: () => import('./features/subscription/checkout-success/checkout-success.component').then(m => m.CheckoutSuccessComponent)
+      },
+      {
         path: 'privacy-policy',
         loadComponent: () => import('./features/legal/privacy-policy/privacy-policy.component').then(m => m.PrivacyPolicyComponent)
       },

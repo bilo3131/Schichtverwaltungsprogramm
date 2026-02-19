@@ -1,9 +1,13 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from .models import Subscription
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .models import Subscription, PaymentRecord
 from .serializers import SubscriptionSerializer, SubscriptionUpdateSerializer
 from .permissions import IsAdminOrHR
 
@@ -297,3 +301,299 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(subscription)
         return Response(serializer.data)
+
+
+class CreateCheckoutSessionView(APIView):
+    """
+    Erstellt eine Stripe Checkout Session für ein Abonnement-Upgrade.
+
+    POST /api/v1/subscriptions/create-checkout-session/
+    Body: { "tier": "pro" }
+    Returns: { "checkout_url": "https://checkout.stripe.com/..." }
+    """
+    permission_classes = [IsAuthenticated, IsAdminOrHR]
+
+    def post(self, request):
+        import stripe
+
+        tier = request.data.get("tier")
+        valid_tiers = ["starter", "pro", "business"]
+        if tier not in valid_tiers:
+            return Response(
+                {"detail": f"Ungültiges Tier. Mögliche Werte: {', '.join(valid_tiers)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        if not stripe.api_key:
+            return Response(
+                {"detail": "Stripe ist nicht konfiguriert. Bitte kontaktiere den Support."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        organization = request.user.organization
+        if not organization:
+            return Response(
+                {"detail": "Keine Organisation gefunden."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        subscription = organization.subscription
+        if not subscription:
+            return Response(
+                {"detail": "Keine Subscription gefunden."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Preis berechnen (in Cent für Stripe)
+        # Für Starter-Plan: Mindestgebühr €29 (Grundpreis, da Mitarbeiterzahl variiert)
+        tier_base_prices = {
+            "starter": 2900,   # €29,00
+            "pro": 5900,       # €59,00
+            "business": 9900,  # €99,00
+        }
+        amount_cents = tier_base_prices[tier]
+
+        # Stripe Customer anlegen oder laden
+        if organization.stripe_customer_id:
+            customer_id = organization.stripe_customer_id
+        else:
+            customer = stripe.Customer.create(
+                email=request.user.email or f"{request.user.username}@schichtplan.de",
+                name=organization.name,
+                metadata={"organization_id": str(organization.id)},
+            )
+            customer_id = customer.id
+            organization.stripe_customer_id = customer_id
+            organization.save(update_fields=["stripe_customer_id"])
+
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:4200")
+
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "eur",
+                        "product_data": {
+                            "name": f"Schichtplan {tier.title()} Abonnement",
+                            "description": f"Monatliches Abonnement (Grundpreis, Mitarbeiterkosten werden separat berechnet)",
+                        },
+                        "unit_amount": amount_cents,
+                        "recurring": {"interval": "month"},
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="subscription",
+            success_url=f"{frontend_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{frontend_url}/subscription",
+            metadata={
+                "organization_id": str(organization.id),
+                "tier": tier,
+                "user_id": str(request.user.id),
+            },
+        )
+
+        return Response({"checkout_url": checkout_session.url}, status=status.HTTP_200_OK)
+
+
+class CheckoutSuccessView(APIView):
+    """
+    Wird aufgerufen, wenn Stripe nach erfolgreicher Zahlung zurückleitet.
+
+    GET /api/v1/subscriptions/checkout-success/?session_id=cs_xxx
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        import stripe
+
+        session_id = request.query_params.get("session_id")
+        if not session_id:
+            return Response(
+                {"detail": "Session-ID fehlt."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+        except stripe.error.StripeError as e:
+            return Response(
+                {"detail": f"Stripe-Fehler: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if session.payment_status != "paid" and session.status != "complete":
+            return Response(
+                {"detail": "Zahlung noch nicht abgeschlossen."},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        organization_id = session.metadata.get("organization_id")
+        tier = session.metadata.get("tier", "starter")
+
+        from accounts.models import Organization
+        try:
+            org = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({"detail": "Organisation nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Subscription aktivieren
+        from datetime import timedelta
+        from django.utils import timezone
+        today = timezone.now().date()
+
+        org.is_trial = False
+        if session.subscription:
+            org.stripe_subscription_id = session.subscription
+        org.save(update_fields=["is_trial", "stripe_subscription_id"])
+
+        sub = org.subscription
+        sub.tier = tier
+        sub.is_active = True
+        sub.trial_end_date = None
+        sub.subscription_end_date = today + timedelta(days=30)
+        sub.save()
+
+        # PaymentRecord anlegen
+        amount_map = {"starter": 29, "pro": 59, "business": 99}
+        PaymentRecord.objects.create(
+            organization=org,
+            subscription=sub,
+            stripe_payment_intent_id=session.payment_intent or "",
+            stripe_checkout_session_id=session_id,
+            amount=amount_map.get(tier, 29),
+            currency="eur",
+            status="succeeded",
+            tier=tier,
+            billing_period_start=today,
+            billing_period_end=today + timedelta(days=30),
+        )
+
+        return Response(
+            {
+                "message": f"Abonnement erfolgreich aktiviert: {tier.title()}",
+                "tier": tier,
+                "subscription_end_date": str(sub.subscription_end_date),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(APIView):
+    """
+    Empfängt Stripe Webhook-Events und aktualisiert den Subscription-Status.
+
+    POST /api/v1/subscriptions/webhook/stripe/
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        import stripe
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+
+        payload = request.body
+        sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        except ValueError:
+            return Response({"detail": "Ungültiger Payload."}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.SignatureVerificationError:
+            return Response({"detail": "Ungültige Signatur."}, status=status.HTTP_400_BAD_REQUEST)
+
+        self._handle_event(event)
+        return Response({"received": True}, status=status.HTTP_200_OK)
+
+    def _handle_event(self, event):
+        from accounts.models import Organization
+        from django.utils import timezone
+        from datetime import timedelta
+
+        event_type = event["type"]
+
+        if event_type == "checkout.session.completed":
+            session = event["data"]["object"]
+            org_id = session.get("metadata", {}).get("organization_id")
+            tier = session.get("metadata", {}).get("tier", "starter")
+            if org_id:
+                try:
+                    org = Organization.objects.get(id=org_id)
+                    today = timezone.now().date()
+                    org.is_trial = False
+                    if session.get("subscription"):
+                        org.stripe_subscription_id = session["subscription"]
+                    org.save(update_fields=["is_trial", "stripe_subscription_id"])
+
+                    sub = org.subscription
+                    if sub:
+                        sub.tier = tier
+                        sub.is_active = True
+                        sub.trial_end_date = None
+                        sub.subscription_end_date = today + timedelta(days=30)
+                        sub.save()
+                except Organization.DoesNotExist:
+                    pass
+
+        elif event_type == "invoice.payment_succeeded":
+            invoice = event["data"]["object"]
+            customer_id = invoice.get("customer")
+            if customer_id:
+                try:
+                    org = Organization.objects.get(stripe_customer_id=customer_id)
+                    from django.utils import timezone
+                    today = timezone.now().date()
+                    sub = org.subscription
+                    if sub:
+                        sub.is_active = True
+                        sub.subscription_end_date = today + timedelta(days=30)
+                        sub.save(update_fields=["is_active", "subscription_end_date"])
+
+                    PaymentRecord.objects.create(
+                        organization=org,
+                        subscription=sub,
+                        stripe_payment_intent_id=invoice.get("payment_intent", ""),
+                        amount=invoice.get("amount_paid", 0) / 100,
+                        currency=invoice.get("currency", "eur"),
+                        status="succeeded",
+                        billing_period_start=today,
+                        billing_period_end=today + timedelta(days=30),
+                    )
+                except Organization.DoesNotExist:
+                    pass
+
+        elif event_type == "invoice.payment_failed":
+            invoice = event["data"]["object"]
+            customer_id = invoice.get("customer")
+            if customer_id:
+                try:
+                    org = Organization.objects.get(stripe_customer_id=customer_id)
+                    sub = org.subscription
+                    if sub:
+                        sub.is_active = False
+                        sub.save(update_fields=["is_active"])
+                except Organization.DoesNotExist:
+                    pass
+
+        elif event_type == "customer.subscription.deleted":
+            subscription_obj = event["data"]["object"]
+            customer_id = subscription_obj.get("customer")
+            if customer_id:
+                try:
+                    org = Organization.objects.get(stripe_customer_id=customer_id)
+                    org.stripe_subscription_id = None
+                    org.save(update_fields=["stripe_subscription_id"])
+                    sub = org.subscription
+                    if sub:
+                        sub.is_active = False
+                        sub.save(update_fields=["is_active"])
+                except Organization.DoesNotExist:
+                    pass

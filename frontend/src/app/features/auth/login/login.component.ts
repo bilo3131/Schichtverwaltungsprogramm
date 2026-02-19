@@ -8,10 +8,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner.component';
 import { UI_CONSTANTS } from '../../../core/constants/ui.constants';
+import { DemoLoginDialogComponent } from './demo-login-dialog.component';
 
 @Component({
   selector: 'app-login',
@@ -25,6 +28,8 @@ import { UI_CONSTANTS } from '../../../core/constants/ui.constants';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    MatDialogModule,
+    MatDividerModule,
     LoadingSpinnerComponent
   ],
   templateUrl: './login.component.html',
@@ -42,7 +47,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private dialog: MatDialog
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -68,7 +74,6 @@ export class LoginComponent implements OnInit, OnDestroy {
       this.authService.login(this.loginForm.value).subscribe({
         next: (response) => {
           this.loading = false;
-          // Theme wird automatisch vom AuthService geladen
           this.showSuccessMessage(response.message || 'Login erfolgreich!');
           this.router.navigate(['/dashboard']);
         },
@@ -79,6 +84,31 @@ export class LoginComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  openDemoDialog(): void {
+    const dialogRef = this.dialog.open(DemoLoginDialogComponent, {
+      width: '400px',
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe(email => {
+      if (email) {
+        this.loading = true;
+        this.authService.demoLogin(email).subscribe({
+          next: (response) => {
+            this.loading = false;
+            this.showSuccessMessage('Demo gestartet! Daten werden täglich um 2 Uhr zurückgesetzt.');
+            this.router.navigate(['/dashboard']);
+          },
+          error: (error) => {
+            this.loading = false;
+            const message = error.error?.error || 'Demo-Login fehlgeschlagen. Bitte versuche es erneut.';
+            this.showErrorMessage(message);
+          }
+        });
+      }
+    });
   }
 
   private showSuccessMessage(message: string): void {

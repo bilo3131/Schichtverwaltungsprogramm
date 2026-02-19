@@ -134,6 +134,19 @@ export class SubscriptionService {
     return this.limits$.value;
   }
 
+  createCheckoutSession(tier: string): Observable<{ checkout_url: string }> {
+    return this.http.post<{ checkout_url: string }>(
+      `${this.apiUrl}/create-checkout-session/`,
+      { tier }
+    );
+  }
+
+  verifyCheckoutSuccess(sessionId: string): Observable<{ message: string; tier: string; subscription_end_date: string }> {
+    return this.http.get<{ message: string; tier: string; subscription_end_date: string }>(
+      `${this.apiUrl}/checkout-success/?session_id=${sessionId}`
+    );
+  }
+
   upgrade(subscriptionId: number, newTier: string): Observable<Subscription> {
     return this.http.post<Subscription>(
       `${this.apiUrl}/${subscriptionId}/upgrade/`,
