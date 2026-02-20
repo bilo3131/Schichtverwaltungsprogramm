@@ -13,7 +13,7 @@ class IsAdminOrHR(permissions.BasePermission):
             return False
         
         # GET-Requests für my_subscription und check_limits sind für alle erlaubt
-        if view.action in ['my_subscription', 'check_limits']:
+        if getattr(view, 'action', None) in ['my_subscription', 'check_limits']:
             return True
         
         # Alle anderen Actions nur für Admin oder HR

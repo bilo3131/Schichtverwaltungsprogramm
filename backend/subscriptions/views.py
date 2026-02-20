@@ -354,47 +354,63 @@ class CreateCheckoutSessionView(APIView):
         }
         amount_cents = tier_base_prices[tier]
 
-        # Stripe Customer anlegen oder laden
-        if organization.stripe_customer_id:
-            customer_id = organization.stripe_customer_id
-        else:
-            customer = stripe.Customer.create(
-                email=request.user.email or f"{request.user.username}@schichtplan.de",
-                name=organization.name,
-                metadata={"organization_id": str(organization.id)},
-            )
-            customer_id = customer.id
-            organization.stripe_customer_id = customer_id
-            organization.save(update_fields=["stripe_customer_id"])
-
         frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:4200")
 
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=["card"],
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "eur",
-                        "product_data": {
-                            "name": f"Schichtplan {tier.title()} Abonnement",
-                            "description": f"Monatliches Abonnement (Grundpreis, Mitarbeiterkosten werden separat berechnet)",
+        try:
+            # Stripe Customer anlegen oder laden
+            if organization.stripe_customer_id:
+                customer_id = organization.stripe_customer_id
+            else:
+                customer = stripe.Customer.create(
+                    email=request.user.email or f"{request.user.username}@schichtplan.de",
+                    name=organization.name,
+                    metadata={"organization_id": str(organization.id)},
+                )
+                customer_id = customer.id
+                organization.stripe_customer_id = customer_id
+                organization.save(update_fields=["stripe_customer_id"])
+
+            checkout_session = stripe.checkout.Session.create(
+                customer=customer_id,
+                payment_method_types=["card"],
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "eur",
+                            "product_data": {
+                                "name": f"Schichtplan {tier.title()} Abonnement",
+                                "description": "Monatliches Abonnement (Grundpreis, Mitarbeiterkosten werden separat berechnet)",
+                            },
+                            "unit_amount": amount_cents,
+                            "recurring": {"interval": "month"},
                         },
-                        "unit_amount": amount_cents,
-                        "recurring": {"interval": "month"},
-                    },
-                    "quantity": 1,
-                }
-            ],
-            mode="subscription",
-            success_url=f"{frontend_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{frontend_url}/subscription",
-            metadata={
-                "organization_id": str(organization.id),
-                "tier": tier,
-                "user_id": str(request.user.id),
-            },
-        )
+                        "quantity": 1,
+                    }
+                ],
+                mode="subscription",
+                success_url=f"{frontend_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{frontend_url}/subscription",
+                metadata={
+                    "organization_id": str(organization.id),
+                    "tier": tier,
+                    "user_id": str(request.user.id),
+                },
+            )
+        except stripe.error.AuthenticationError:
+            return Response(
+                {"detail": "Stripe-Authentifizierung fehlgeschlagen. Bitte prüfe den API-Key."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except stripe.error.StripeError as e:
+            return Response(
+                {"detail": f"Stripe-Fehler: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Unerwarteter Fehler: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response({"checkout_url": checkout_session.url}, status=status.HTTP_200_OK)
 
