@@ -1,7 +1,7 @@
 <div class="tutorial-dialog">
   <div class="tutorial-header">
     <mat-icon class="welcome-icon">school</mat-icon>
-    <h2 mat-dialog-title>Willkommen zur Schichtplan-App!</h2>
+    <h2 mat-dialog-title>Willkommen bei <img [src]="isDarkMode ? 'assets/svg/logo-darkmode.svg' : 'assets/svg/logo-lightmode.svg'" alt="Vardiy Logo" class="app-logo"></h2>
     <button mat-icon-button class="close-button" (click)="skipTutorial()" matTooltip="Tutorial überspringen">
       <mat-icon>close</mat-icon>
     </button>

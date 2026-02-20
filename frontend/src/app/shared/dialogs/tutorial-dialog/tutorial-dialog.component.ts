@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TutorialService, TutorialStep } from '../../../core/services/tutorial.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-tutorial-dialog',
@@ -24,12 +25,17 @@ import { TutorialService, TutorialStep } from '../../../core/services/tutorial.s
 export class TutorialDialogComponent implements OnInit {
   steps: TutorialStep[] = [];
   currentStepIndex = 0;
-  
+
   constructor(
     public dialogRef: MatDialogRef<TutorialDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { role: string },
-    private tutorialService: TutorialService
-  ) {}
+    private tutorialService: TutorialService,
+    private themeService: ThemeService
+  ) { }
+
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode;
+  }
 
   ngOnInit(): void {
     this.steps = this.tutorialService.getTutorialSteps(this.data.role);
