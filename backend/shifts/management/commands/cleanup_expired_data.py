@@ -158,7 +158,7 @@ class Command(BaseCommand):
         from accounts.models import Organization, User
         from shifts.models import (
             Shift, VacationRequest, ShiftSwapRequest,
-            Availability, Notification, Employee,
+            Availability, Notification,
         )
 
         cutoff = now - timedelta(days=INACTIVE_ORG_GRACE_DAYS)
