@@ -1,8 +1,8 @@
 # Backend-Upload Script (ohne settings.py)
 # Lädt alle geänderten Backend-Dateien auf den Server
 
-$SERVER = "hetzner-schichtplan"
-$REMOTE_PATH = "/var/www/schichtplan/backend"
+$SERVER = "hetzner"
+$REMOTE_PATH = "/var/www/vardiy/backend"
 
 Write-Host "Backend-Upload gestartet..." -ForegroundColor Green
 Write-Host ""

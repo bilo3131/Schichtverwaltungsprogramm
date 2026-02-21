@@ -129,6 +129,16 @@ sudo chmod +x /usr/local/bin/backup-schichtplan.sh
 crontab -e
 # Füge hinzu:
 # 0 2 * * * /usr/local/bin/backup-schichtplan.sh
+# 0 3 * * * /var/www/schichtplan/env/bin/python /var/www/schichtplan/manage.py cleanup_expired_data >> /var/log/cleanup_expired_data.log 2>&1
+```
+
+### DSGVO-Datenlöschung testen (vor erstem Produktiveinsatz)
+```bash
+# Dry-run: zeigt betroffene Datensätze, löscht nichts
+python manage.py cleanup_expired_data --dry-run
+
+# Echte Ausführung
+python manage.py cleanup_expired_data
 ```
 
 ## Post-Deployment

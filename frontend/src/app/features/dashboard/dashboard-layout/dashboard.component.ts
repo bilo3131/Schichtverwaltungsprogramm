@@ -62,6 +62,7 @@ export class DashboardComponent implements OnInit {
   notifications: Notification[] = [];
   unreadCount = 0;
   currentTier: string = '';
+  showDemoBanner = false;
   currentYear = new Date().getFullYear();
   private lastUserId: number | null = null; // Tracke die aktuelle User-ID
   
@@ -130,6 +131,12 @@ export class DashboardComponent implements OnInit {
       icon: 'corporate_fare',
       route: '/departments',
       roles: ['admin', 'hr']
+    },
+    {
+      label: 'AGB',
+      icon: 'description',
+      route: '/terms',
+      roles: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader', 'employee']
     },
     {
       label: 'Datenschutz',
@@ -202,10 +209,21 @@ export class DashboardComponent implements OnInit {
       if (user && user.role === 'admin') {
         this.loadSubscriptionInfo();
       }
+
+      // Subscription frisch laden (kein Cache) oder Banner sofort zurücksetzen
+      if (user) {
+        this.subscriptionService.loadSubscription();
+      } else {
+        this.showDemoBanner = false;
+      }
     });
-    
+
     this.themeService.darkMode$.subscribe(isDark => {
       this.isDarkMode = isDark;
+    });
+
+    this.subscriptionService.getCurrentSubscription().subscribe(subscription => {
+      this.showDemoBanner = !!subscription?.company_name?.includes('(Demo)');
     });
   }
 

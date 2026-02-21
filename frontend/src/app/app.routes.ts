@@ -82,6 +82,10 @@ export const routes: Routes = [
       {
         path: 'imprint',
         loadComponent: () => import('./features/legal/imprint/imprint.component').then(m => m.ImprintComponent)
+      },
+      {
+        path: 'terms',
+        loadComponent: () => import('./features/legal/terms/terms.component').then(m => m.TermsComponent)
       }
     ]
   },

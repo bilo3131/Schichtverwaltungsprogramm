@@ -113,7 +113,7 @@
 </mat-toolbar>
 
 <!-- Demo-Modus Banner -->
-<div class="demo-banner" *ngIf="authService.isDemo">
+<div class="demo-banner" *ngIf="showDemoBanner">
   <mat-icon>info</mat-icon>
   <span>Demo-Modus &mdash; Alle Daten werden täglich um 2 Uhr zurückgesetzt.</span>
   <button mat-button routerLink="/subscription" class="demo-upgrade-btn">
@@ -130,7 +130,7 @@
     <div class="sidenav-content-wrapper">
       <mat-nav-list>
         <ng-container *ngFor="let item of menuItems">
-          <ng-container *ngIf="item.label !== 'Datenschutz' && item.label !== 'Impressum'">
+          <ng-container *ngIf="item.label !== 'AGB' && item.label !== 'Datenschutz' && item.label !== 'Impressum'">
             <a 
               mat-list-item 
               [routerLink]="item.route"
@@ -146,7 +146,7 @@
       </mat-nav-list>
       <div class="legal-links">
         <ng-container *ngFor="let item of menuItems">
-          <ng-container *ngIf="item.label === 'Datenschutz' || item.label === 'Impressum'">
+          <ng-container *ngIf="item.label === 'AGB' || item.label === 'Datenschutz' || item.label === 'Impressum'">
             <a 
               mat-list-item 
               [routerLink]="item.route"

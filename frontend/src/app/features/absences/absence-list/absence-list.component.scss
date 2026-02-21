@@ -1,284 +1,471 @@
 .absence-list {
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
 
-        .header-actions {
-          display: flex;
-          gap: 0.5rem;
-          align-items: center;
-        }
+    h1 { margin: 0; }
 
-        button {
-          mat-icon {
-            margin-right: 0.5rem;
-          }
-        }
-      }
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+  }
+}
 
-      .filter-card {
-        margin-bottom: 1.5rem;
-      }
+// ---- Controls-Karte ----
 
-      .filters {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
+.controls-card {
+  margin-bottom: 1.5rem;
+}
 
-      .filters mat-form-field {
-        min-width: 200px;
-      }
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.type-filter {
+  min-width: 180px;
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+}
+
+.flex-spacer { flex: 1 1 auto; }
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .range-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    min-width: 220px;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.7);
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// ---- Kalender-Karte ----
+
+.calendar-card .calendar-content {
+  padding: 0 !important;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(0, 0, 0, 0.54);
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+  }
+}
+
+// ---- Kalender-Tabelle ----
+
+.calendar-scroll-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.calendar-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: max-content;
+
+  // Sticky Mitarbeiter-Spalte
+  .employee-col {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #ffffff;
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+  }
+
+  thead .employee-col {
+    z-index: 4;
+  }
+
+  // Monats-Kopfzeile
+  .month-row {
+    .month-spacer {
+      background: #f5f5f5;
     }
 
-    .empty-state {
+    .month-header-cell {
       text-align: center;
-      padding: 60px 20px;
-      color: rgba(0, 0, 0, 0.54);
-    }
-
-    .empty-state mat-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      margin-bottom: 16px;
-    }
-
-    .absences-table {
-      width: 100%;
-
-      .mat-mdc-row:hover {
-        background-color: rgba(0, 0, 0, 0.04);
-        cursor: pointer;
-      }
-
-      .clickable-cell {
-        cursor: pointer;
-      }
-    }
-
-    .chip-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      margin-right: 4px;
-    }
-
-    .notes {
-      max-width: 200px;
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 4px;
+      text-transform: capitalize;
+      color: rgba(0, 0, 0, 0.55);
+      background: #f5f5f5;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       white-space: nowrap;
     }
+  }
 
-    .text-muted {
-      color: rgba(0, 0, 0, 0.54);
-      font-style: italic;
+  // Tages-Kopfzeile
+  .day-row {
+    .employee-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(0, 0, 0, 0.55);
+      padding: 6px 12px;
+      background: #f5f5f5;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.12);
     }
 
-    .current-absence {
-      background-color: #fff3e0;
-    }
+    .day-col {
+      width: 38px;
+      min-width: 38px;
+      max-width: 38px;
+      text-align: center;
+      padding: 4px 2px;
+      background: #f5f5f5;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.12);
+      vertical-align: middle;
 
-    ::ng-deep .separator-row td {
-      border-top: 3px solid #000000 !important;
-      padding-top: 24px !important;
-    }
+      .day-abbrev {
+        font-size: 0.68rem;
+        color: rgba(0, 0, 0, 0.5);
+        line-height: 1.2;
+      }
 
-    tr.mat-mdc-row:hover {
-      background-color: #f5f5f5;
-    }
+      .day-num {
+        font-size: 0.85rem;
+        font-weight: 500;
+        line-height: 1.6;
+        color: rgba(0, 0, 0, 0.8);
 
-    :host-context(.dark-theme) tr.mat-mdc-row:hover {
-      background-color: #424242;
-    }
+        &.today-circle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #1976d2;
+          color: white;
+          border-radius: 50%;
+          width: 22px;
+          height: 22px;
+          font-size: 0.78rem;
+          margin: 0 auto;
+        }
+      }
 
-// Dark Mode
-:host-context(.dark-theme) .absence-list {
-  .header {
-    h1 {
-      color: #ffffff;
+      &.weekend {
+        .day-abbrev, .day-num { color: rgba(0, 0, 0, 0.3); }
+      }
+
+      &.week-sep {
+        border-left: 2px solid rgba(0, 0, 0, 0.15);
+      }
     }
   }
 
-  .absences-table {
-    .mat-mdc-row:hover {
-      background-color: rgba(255, 255, 255, 0.08);
+  // Zeilen-Zellen
+  tbody {
+    .employee-name-cell {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      height: 40px;
+      background: #ffffff;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    .absence-cell {
+      width: 38px;
+      min-width: 38px;
+      max-width: 38px;
+      height: 40px;
+      padding: 0;
+      position: relative;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      background: #ffffff;
+
+      &.weekend {
+        background: rgba(0, 0, 0, 0.025);
+      }
+
+      &.today-col {
+        background: rgba(25, 118, 210, 0.06);
+      }
+
+      &.week-sep {
+        border-left: 2px solid rgba(0, 0, 0, 0.07);
+      }
+
+      &.has-absence {
+        cursor: pointer;
+
+        &:hover .cell-bar {
+          filter: brightness(1.15);
+          transition: filter 0.15s ease;
+        }
+      }
+
+      // Der farbige Abwesenheits-Balken
+      .cell-bar {
+        position: absolute;
+        top: 7px;
+        bottom: 7px;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        opacity: 0.88;
+
+        &.bar-start {
+          left: 3px;
+          border-radius: 5px 0 0 5px;
+        }
+
+        &.bar-end {
+          right: 3px;
+          border-radius: 0 5px 5px 0;
+        }
+
+        &.bar-start.bar-end {
+          border-radius: 5px;
+        }
+
+        .bar-icon {
+          position: absolute;
+          left: 5px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 13px;
+          height: 13px;
+          width: 13px;
+          color: rgba(255, 255, 255, 0.95);
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    // Zeilen-Hover
+    tr:hover {
+      .employee-name-cell,
+      .absence-cell {
+        background-color: rgba(0, 0, 0, 0.025) !important;
+      }
+
+      .absence-cell.weekend {
+        background-color: rgba(0, 0, 0, 0.04) !important;
+      }
+
+      .absence-cell.today-col {
+        background-color: rgba(25, 118, 210, 0.1) !important;
+      }
     }
   }
+}
 
-  .text-muted {
+// Mehrzeiliger Tooltip
+::ng-deep .multiline-tooltip {
+  white-space: pre-line !important;
+}
+
+// ---- Dark Mode ----
+
+:host-context(.dark-theme) {
+  .legend .legend-item {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .empty-state {
     color: rgba(255, 255, 255, 0.54);
   }
 
-  .current-absence {
-    background-color: rgba(255, 152, 0, 0.2);
-  }
+  .calendar-table {
+    .employee-col {
+      background: #424242;
+    }
 
-  ::ng-deep .separator-row td {
-    border-top-color: rgba(255, 255, 255, 0.12) !important;
-  }
-}
+    thead .employee-col {
+      background: #303030;
+    }
 
-:host-context(.dark-theme) .empty-state {
-  color: rgba(255, 255, 255, 0.54);
-}
+    .month-row {
+      .month-spacer { background: #303030; }
+      .month-header-cell {
+        background: #303030;
+        color: rgba(255, 255, 255, 0.55);
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+      }
+    }
 
-:host-context(.dark-theme) .info-box {
-  background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+    .day-row {
+      .employee-header {
+        background: #303030;
+        color: rgba(255, 255, 255, 0.55);
+        border-bottom-color: rgba(255, 255, 255, 0.15);
+      }
 
-  .info-header {
-    .info-title {
-      h3 {
-        color: #64b5f6;
+      .day-col {
+        background: #303030;
+        border-bottom-color: rgba(255, 255, 255, 0.15);
+
+        .day-abbrev { color: rgba(255, 255, 255, 0.4); }
+        .day-num { color: rgba(255, 255, 255, 0.8); }
+
+        &.weekend {
+          .day-abbrev, .day-num { color: rgba(255, 255, 255, 0.25); }
+        }
+
+        &.week-sep { border-left-color: rgba(255, 255, 255, 0.12); }
+      }
+    }
+
+    tbody {
+      .employee-name-cell {
+        background: #424242;
+        color: rgba(255, 255, 255, 0.87);
+        border-bottom-color: rgba(255, 255, 255, 0.06);
+      }
+
+      .absence-cell {
+        background: #424242;
+        border-bottom-color: rgba(255, 255, 255, 0.06);
+
+        &.weekend { background: rgba(255, 255, 255, 0.03); }
+        &.today-col { background: rgba(25, 118, 210, 0.15); }
+        &.week-sep { border-left-color: rgba(255, 255, 255, 0.07); }
+      }
+
+      tr:hover {
+        .employee-name-cell,
+        .absence-cell {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .absence-cell.today-col {
+          background-color: rgba(25, 118, 210, 0.2) !important;
+        }
       }
     }
   }
 
-  .info-content {
-    .info-section {
+  .info-box {
+    background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+
+    .info-title h3 { color: #64b5f6; }
+
+    .info-content .info-section {
       h4 {
         color: #ffffff;
-
-        mat-icon {
-          color: #64b5f6;
-        }
+        mat-icon { color: #64b5f6; }
       }
-
-      p {
-        color: rgba(255, 255, 255, 0.8);
-      }
-
-      ul li {
-        color: rgba(255, 255, 255, 0.8);
-
-        strong {
-          color: #ffffff;
-        }
-      }
+      p { color: rgba(255, 255, 255, 0.8); }
     }
   }
 }
 
-    .info-box-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      animation: fadeIn 0.3s ease;
+// ---- Info-Box ----
+
+.info-box-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.info-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 560px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 1001;
+  margin: 0;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-left: 4px solid #2196f3;
+
+  .info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    .info-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #1976d2;
+      }
+    }
+  }
+
+  .info-content .info-section {
+    margin-bottom: 1.25rem;
+
+    &:last-child { margin-bottom: 0; }
+
+    h4 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0 0 0.4rem 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #424242;
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #1976d2; }
     }
 
-    .info-box {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      max-width: 800px;
-      max-height: 85vh;
-      overflow-y: auto;
-      z-index: 1001;
-      animation: slideIn 0.3s ease;
+    p {
       margin: 0;
-      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-      border-left: 4px solid #2196f3;
-
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translate(-50%, -45%);
-        }
-        to {
-          opacity: 1;
-          transform: translate(-50%, -50%);
-        }
-      }
-
-      .info-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-
-        .info-title {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-
-          mat-icon {
-            font-size: 28px;
-            width: 28px;
-            height: 28px;
-          }
-
-          h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: #1976d2;
-          }
-        }
-      }
-
-      .info-content {
-        .info-section {
-          margin-bottom: 1.5rem;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          h4 {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 0 0 0.5rem 0;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #424242;
-
-            mat-icon {
-              font-size: 20px;
-              width: 20px;
-              height: 20px;
-              color: #1976d2;
-            }
-          }
-
-          p {
-            margin: 0 0 0.5rem 0;
-            line-height: 1.6;
-            color: #616161;
-          }
-
-          ul {
-            margin: 0.5rem 0 0 0;
-            padding-left: 1.5rem;
-            
-            li {
-              margin-bottom: 0.5rem;
-              line-height: 1.6;
-              color: #616161;
-
-              strong {
-                color: #424242;
-              }
-
-              &:last-child {
-                margin-bottom: 0;
-              }
-            }
-          }
-        }
-      }
+      line-height: 1.6;
+      color: #616161;
+      font-size: 0.9rem;
     }
+  }
+}

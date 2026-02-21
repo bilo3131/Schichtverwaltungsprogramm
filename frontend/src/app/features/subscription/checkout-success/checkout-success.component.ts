@@ -53,13 +53,20 @@ import { SubscriptionService } from '../../../core/services/subscription.service
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      margin: -2rem;
+    }
+
     .success-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: calc(100vh - 64px);
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       padding: 1rem;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .success-card {

@@ -9,14 +9,14 @@
 set -e  # Bei Fehler abbrechen
 
 echo "=========================================="
-echo "  Schichtplan - Server Update Script"
+echo "  Vardiy - Server Update Script"
 echo "=========================================="
 echo ""
 
 # Variablen - PASSE DIESE AN!
-SERVER_USER="your-user"
-SERVER_HOST="bilal-alac.de"
-SERVER_PATH="/var/www/schichtplan"
+SERVER_USER="hetzner"
+SERVER_HOST="vardiy.de"
+SERVER_PATH="/var/www/vardiy"
 
 # Farben
 GREEN='\033[0;32m'
@@ -37,7 +37,7 @@ echo ""
 # Backend Update
 echo -e "${YELLOW}► Aktualisiere Backend auf Server...${NC}"
 ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
-cd /var/www/schichtplan
+cd /var/www/vardiy
 echo "  - Git Pull..."
 git pull origin main
 
@@ -49,10 +49,10 @@ echo "  - Migrationen prüfen..."
 python manage.py migrate --settings=schichtplan.settings_production --noinput
 
 echo "  - Gunicorn neu starten..."
-sudo systemctl restart schichtplan
+sudo systemctl restart gunicorn-vardiy
 
 echo "  - Status prüfen..."
-sudo systemctl status schichtplan --no-pager -l
+sudo systemctl status gunicorn-vardiy --no-pager -l
 
 ENDSSH
 
@@ -101,8 +101,8 @@ echo "  ✓ Update erfolgreich abgeschlossen!"
 echo "==========================================${NC}"
 echo ""
 echo "Deine Anwendung sollte jetzt aktualisiert sein:"
-echo "  https://bilal-alac.de"
+echo "  https://vardiy.de"
 echo ""
 echo "Prüfe die Logs bei Problemen:"
-echo "  ssh $SERVER_USER@$SERVER_HOST 'sudo journalctl -u schichtplan -f'"
+echo "  ssh $SERVER_USER@$SERVER_HOST 'sudo journalctl -u gunicorn-vardiy -f'"
 echo ""

@@ -120,12 +120,19 @@
       <section>
         <h2>7. Zahlungsabwicklung und Abonnements</h2>
         <p>
-          Für kostenpflichtige Tarife wird Stripe eingesetzt. Bei der Erstellung von Checkout-Sessions werden
+          Für kostenpflichtige Tarife wird <strong>Stripe</strong> eingesetzt. Bei der Erstellung von Checkout-Sessions werden
           abrechnungsbezogene Daten an Stripe übermittelt (z. B. Organisationsbezug, Tarif, Zahlungs-Session).
         </p>
         <p>
           Zahlungsdaten (z. B. Kreditkartendaten) werden durch Stripe verarbeitet und nicht direkt in dieser
           Anwendung gespeichert.
+        </p>
+        <p>
+          Anbieter: Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, D02 H210, Irland
+          (EU-Niederlassung). Muttergesellschaft: Stripe, Inc., 354 Oyster Point Blvd, South San Francisco, CA 94080, USA.
+          Dabei können personenbezogene Daten in die USA übermittelt werden. Die Übermittlung erfolgt auf Grundlage
+          der EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO). Weitere Informationen:
+          <a href="https://stripe.com/de/privacy" target="_blank" rel="noopener">stripe.com/de/privacy</a>.
         </p>
       </section>
 
@@ -133,9 +140,19 @@
         <h2>8. Empfänger und Auftragsverarbeiter</h2>
         <p>Personenbezogene Daten können an folgende Kategorien von Empfängern übermittelt werden:</p>
         <ul>
-          <li>Hosting- und Infrastrukturanbieter (Betrieb der Anwendung)</li>
-          <li>E-Mail-Dienstleister (Versand transaktionaler E-Mails)</li>
-          <li>Zahlungsdienstleister Stripe (Abo- und Zahlungsabwicklung)</li>
+          <li>
+            <strong>Hetzner Online GmbH</strong>, Industriestr. 25, 91710 Gunzenhausen, Deutschland –
+            Hosting- und Infrastrukturdienstleister (Serverbetrieb, Datenbank, Backups). Serverstandort: Deutschland (EU).
+            Mit Hetzner besteht ein Vertrag zur Auftragsverarbeitung gemäß Art. 28 DSGVO.
+          </li>
+          <li>
+            <strong>Hetzner Online GmbH</strong> (E-Mail-Dienst) – Versand transaktionaler E-Mails über den
+            Hetzner-Mailserver. Serverstandort: Deutschland (EU). Der bestehende AVV mit Hetzner umfasst auch diesen Dienst.
+          </li>
+          <li>
+            <strong>Stripe Payments Europe, Ltd.</strong>, Dublin, Irland / Stripe, Inc., USA –
+            Abo- und Zahlungsabwicklung. Datentransfer in die USA auf Basis von EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO).
+          </li>
         </ul>
         <p>
           Mit externen Dienstleistern werden, soweit erforderlich, Verträge zur Auftragsverarbeitung gemäß Art. 28
@@ -147,13 +164,30 @@
         <h2>9. Speicherdauer</h2>
         <p>
           Wir speichern personenbezogene Daten nur so lange, wie es für die jeweiligen Zwecke erforderlich ist oder
-          gesetzliche Aufbewahrungspflichten bestehen.
+          gesetzliche Aufbewahrungspflichten bestehen. Die Datenlöschung erfolgt automatisiert.
         </p>
         <ul>
-          <li>Konto- und Organisationsdaten: bis zur Löschung/Deaktivierung und Ablauf gesetzlicher Fristen</li>
-          <li>Planungs- und Prozessdaten: gemäß betrieblicher Notwendigkeit und gesetzlichen Vorgaben</li>
-          <li>Abrechnungsbezogene Daten: gemäß handels- und steuerrechtlichen Aufbewahrungspflichten</li>
-          <li>Technische Logdaten: zeitlich begrenzt zur Gewährleistung von Betrieb und Sicherheit</li>
+          <li>
+            <strong>Konto- und Organisationsdaten</strong>: Solange das Konto aktiv ist.
+            Nach Deaktivierung der Organisation werden Benutzerdaten nach <strong>30 Tagen</strong>
+            anonymisiert (Name, E-Mail-Adresse, Telefonnummer werden unkenntlich gemacht).
+          </li>
+          <li>
+            <strong>Schicht-, Urlaubs-, Abwesenheits- und Tauschantragsdaten</strong>:
+            <strong>3 Jahre</strong> nach dem jeweiligen Schichtdatum bzw. Enddatum des Antrags
+            (Grundlage: Nachweispflichten nach Arbeitszeitgesetz).
+          </li>
+          <li>
+            <strong>In-App-Benachrichtigungen</strong>: <strong>90 Tage</strong> nach Erstellung.
+          </li>
+          <li>
+            <strong>Abrechnungsbezogene Daten (Stripe)</strong>: <strong>10 Jahre</strong>
+            gemäß § 147 AO und § 257 HGB. Diese Daten werden durch Stripe verwaltet.
+          </li>
+          <li>
+            <strong>Technische Logdaten</strong>: <strong>90 Tage</strong>, danach automatische
+            Bereinigung durch den Server.
+          </li>
         </ul>
       </section>
 
@@ -201,15 +235,6 @@
         </p>
       </section>
 
-      <section>
-        <h2>14. Wichtige Ergänzungen vor Go-Live</h2>
-        <p>Bitte diese Angaben vor dem produktiven Einsatz verbindlich ergänzen:</p>
-        <ul>
-          <li>Tatsächlich genutzte Hosting-, E-Mail- und Backup-Dienstleister inkl. Standort</li>
-          <li>Prüfung internationaler Datentransfers (z. B. bei Stripe) inkl. geeigneter Garantien</li>
-          <li>Festlegung konkreter Lösch- und Aufbewahrungsfristen je Datenkategorie</li>
-        </ul>
-      </section>
     </mat-card-content>
   </mat-card>
 </div>

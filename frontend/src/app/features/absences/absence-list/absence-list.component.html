@@ -1,161 +1,190 @@
 <div class="absence-list">
-      <div class="header">
-        <h1>Abwesenheiten</h1>
-        <div class="header-actions">
-          <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen anzeigen" color="primary">
-            <mat-icon>info</mat-icon>
-          </button>
-          <button mat-raised-button color="primary" (click)="openAbsenceDialog()">
-            <mat-icon>add</mat-icon>
-            Neue Abwesenheit
-          </button>
-        </div>
-      </div>
 
-      <mat-card class="filter-card">
-        <mat-card-content>
-          <div class="filters">
-            <mat-form-field appearance="outline">
-              <mat-label>Typ filtern</mat-label>
-              <mat-select [(ngModel)]="selectedType" (ngModelChange)="loadAbsences()">
-                <mat-option value="">Alle</mat-option>
-                <mat-option value="sick">Krank</mat-option>
-                <mat-option value="vacation">Urlaub</mat-option>
-                <mat-option value="vacation_wish">Urlaubswunsch</mat-option>
-                <mat-option value="kug">KUG</mat-option>
-                <mat-option value="other">Sonstiges</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Zeitraum</mat-label>
-              <mat-select [(ngModel)]="timeFilter" (ngModelChange)="loadAbsences()">
-                <mat-option value="current">Aktuell</mat-option>
-                <mat-option value="upcoming">Kommend</mat-option>
-                <mat-option value="past">Vergangen</mat-option>
-                <mat-option value="all">Alle</mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <app-loading-spinner *ngIf="loading"></app-loading-spinner>
-
-      <mat-card *ngIf="!loading">
-        <mat-card-content>
-          <table mat-table [dataSource]="dataSource" class="absences-table">
-            <ng-container matColumnDef="employee">
-              <th mat-header-cell *matHeaderCellDef>Mitarbeiter</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">{{ absence.employee_name }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="absence_type">
-              <th mat-header-cell *matHeaderCellDef>Typ</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">
-                <mat-chip [color]="getAbsenceTypeColor(absence.absence_type)">
-                  <mat-icon class="chip-icon">{{ getAbsenceIcon(absence.absence_type) }}</mat-icon>
-                  {{ getAbsenceTypeLabel(absence.absence_type) }}
-                </mat-chip>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="start_date">
-              <th mat-header-cell *matHeaderCellDef>Von</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">{{ absence.start_date | date:'dd.MM.yyyy' }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="end_date">
-              <th mat-header-cell *matHeaderCellDef>Bis</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">
-                <span *ngIf="absence.end_date">{{ absence.end_date | date:'dd.MM.yyyy' }}</span>
-                <span *ngIf="!absence.end_date" class="text-muted">Unbestimmt</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="duration">
-              <th mat-header-cell *matHeaderCellDef>Dauer</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">
-                {{ calculateDuration(absence.start_date, absence.end_date) }}
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="notes">
-              <th mat-header-cell *matHeaderCellDef>Notizen</th>
-              <td mat-cell *matCellDef="let absence" class="clickable-cell" (click)="openCalendarView(absence)">
-                <span class="notes" [title]="absence.notes">{{ absence.notes || '-' }}</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-              <td mat-cell *matCellDef="let absence">
-                <ng-container *ngIf="absence.absence_type !== 'vacation'">
-                  <button mat-icon-button color="primary" (click)="openAbsenceDialog(absence)">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="deleteAbsence(absence.id)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </ng-container>
-                <ng-container *ngIf="absence.absence_type === 'vacation'">
-                  <mat-icon class="text-muted" matTooltip="Genehmigte Urlaube können nur auf der Seite 'Urlaub' verwaltet werden">lock</mat-icon>
-                </ng-container>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
-                [class.current-absence]="isCurrentAbsence(row)"
-                [class.separator-row]="isFirstPastAbsence(row)"></tr>
-          </table>
-
-          <div *ngIf="dataSource.data.length === 0" class="empty-state">
-            <mat-icon>event_available</mat-icon>
-            <p>Keine Abwesenheiten gefunden</p>
-          </div>
-        </mat-card-content>
-      </mat-card>
+  <div class="page-header">
+    <h1>Abwesenheiten</h1>
+    <div class="header-actions">
+      <button mat-icon-button (click)="showInfoBox = !showInfoBox" matTooltip="Informationen" color="primary">
+        <mat-icon>info</mat-icon>
+      </button>
+      <button mat-raised-button color="primary" (click)="openAbsenceDialog()">
+        <mat-icon>add</mat-icon>
+        Neue Abwesenheit
+      </button>
     </div>
+  </div>
 
-<!-- Info Box Overlay -->
-<div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
-  <mat-card class="info-box" *ngIf="showInfoBox">
+  <!-- Filter & Navigation -->
+  <mat-card class="controls-card">
     <mat-card-content>
-      <div class="info-header">
-        <div class="info-title">
-          <mat-icon color="primary">info</mat-icon>
-          <h3>Informationen zu Abwesenheiten</h3>
+      <div class="controls-row">
+
+        <mat-form-field appearance="outline" class="type-filter">
+          <mat-label>Typ filtern</mat-label>
+          <mat-select [(ngModel)]="selectedType" (ngModelChange)="filterAbsencesByDepartment()">
+            <mat-option value="">Alle Typen</mat-option>
+            <mat-option value="sick">Krank</mat-option>
+            <mat-option value="vacation">Urlaub</mat-option>
+            <mat-option value="vacation_wish">Urlaubswunsch</mat-option>
+            <mat-option value="kug">KUG</mat-option>
+            <mat-option value="other">Sonstiges</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="flex-spacer"></div>
+
+        <div class="calendar-nav">
+          <button mat-stroked-button (click)="goToToday()">
+            <mat-icon>today</mat-icon>
+            Heute
+          </button>
+          <button mat-icon-button (click)="previousWeek()" matTooltip="Vorherige Woche">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="range-label">{{ getRangeLabel() }}</span>
+          <button mat-icon-button (click)="nextWeek()" matTooltip="Nächste Woche">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
         </div>
-        <button mat-icon-button (click)="closeInfoBox()" matTooltip="Schließen">
-          <mat-icon>close</mat-icon>
-        </button>
+
       </div>
-      <div class="info-content">
-        <div class="info-section">
-          <h4><mat-icon>event_available</mat-icon> Was sind Abwesenheiten?</h4>
-          <p>Abwesenheiten umfassen alle Zeiträume, in denen Mitarbeiter nicht arbeiten, z.B. Krankheit, Urlaub, KUG oder Sonstiges.</p>
+
+      <!-- Legende -->
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#f44336"></span>
+          <span>Krank</span>
         </div>
-        <div class="info-section">
-          <h4><mat-icon>add</mat-icon> Abwesenheit anlegen</h4>
-          <p>Mit "Neue Abwesenheit" können Sie eine Abwesenheit für einen Mitarbeiter erfassen. Typ, Zeitraum und Notizen können angegeben werden.</p>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#2196F3"></span>
+          <span>Urlaub</span>
         </div>
-        <div class="info-section">
-          <h4><mat-icon>edit</mat-icon> Bearbeiten & Aktionen</h4>
-          <ul>
-            <li><strong>Bearbeiten:</strong> Öffnet den Dialog zur Bearbeitung der Abwesenheit</li>
-            <li><strong>Löschen:</strong> Entfernt die Abwesenheit (nur mit entsprechender Berechtigung)</li>
-            <li><strong>Detailansicht:</strong> Ein Klick auf eine Zeile öffnet die Kalenderansicht</li>
-          </ul>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#FF9800"></span>
+          <span>Urlaubswunsch</span>
         </div>
-        <div class="info-section">
-          <h4><mat-icon>info</mat-icon> Besonderheiten</h4>
-          <ul>
-            <li><strong>Typen:</strong> Verschiedene Abwesenheitstypen werden farblich hervorgehoben</li>
-            <li><strong>Filter:</strong> Abwesenheiten können nach Typ und Zeitraum gefiltert werden</li>
-            <li><strong>Verknüpfung:</strong> Urlaubsanträge werden über die Urlaubsverwaltung verwaltet</li>
-          </ul>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#9C27B0"></span>
+          <span>KUG</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#607D8B"></span>
+          <span>Sonstiges</span>
         </div>
       </div>
+
     </mat-card-content>
   </mat-card>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <!-- Kalender -->
+  <mat-card *ngIf="!loading" class="calendar-card">
+    <mat-card-content class="calendar-content">
+
+      <!-- Leer-Zustand -->
+      <div *ngIf="calendarRows.length === 0" class="empty-state">
+        <mat-icon>event_available</mat-icon>
+        <p>Keine Abwesenheiten vorhanden</p>
+      </div>
+
+      <!-- Kalender-Tabelle -->
+      <div *ngIf="calendarRows.length > 0" class="calendar-scroll-wrapper">
+        <table class="calendar-table">
+          <thead>
+
+            <!-- Monats-Kopfzeile -->
+            <tr class="month-row">
+              <th class="employee-col month-spacer"></th>
+              <th *ngFor="let mg of monthGroups"
+                  [attr.colspan]="mg.count"
+                  class="month-header-cell">
+                {{ mg.label }}
+              </th>
+            </tr>
+
+            <!-- Tages-Kopfzeile -->
+            <tr class="day-row">
+              <th class="employee-col employee-header">Mitarbeiter</th>
+              <th *ngFor="let day of visibleDays; let i = index"
+                  class="day-col"
+                  [class.weekend]="isWeekend(day)"
+                  [class.today-col]="isToday(day)"
+                  [class.week-sep]="isWeekSeparator(day, i)">
+                <div class="day-abbrev">{{ getDayAbbrev(day) }}</div>
+                <div class="day-num" [class.today-circle]="isToday(day)">{{ day.getDate() }}</div>
+              </th>
+            </tr>
+
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of calendarRows">
+
+              <!-- Mitarbeiter-Zelle (sticky) -->
+              <td class="employee-col employee-name-cell">{{ row.employee.name }}</td>
+
+              <!-- Tages-Zellen -->
+              <td *ngFor="let cell of row.cells; let i = index"
+                  class="absence-cell"
+                  [class.weekend]="isWeekend(visibleDays[i])"
+                  [class.today-col]="isToday(visibleDays[i])"
+                  [class.week-sep]="isWeekSeparator(visibleDays[i], i)"
+                  [class.has-absence]="!!cell"
+                  [matTooltip]="cell ? getCellTooltip(cell) : ''"
+                  matTooltipClass="multiline-tooltip"
+                  [matTooltipDisabled]="!cell"
+                  (click)="cell && cell.absence_type !== 'vacation' ? openAbsenceDialog(cell) : null">
+
+                <!-- Farbiger Balken für Abwesenheit -->
+                <div *ngIf="cell"
+                     class="cell-bar"
+                     [class.bar-start]="!row.cells[i - 1] || row.cells[i - 1]?.id !== cell.id"
+                     [class.bar-end]="!row.cells[i + 1] || row.cells[i + 1]?.id !== cell.id"
+                     [style.background-color]="getAbsenceColor(cell.absence_type)">
+                  <!-- Icon am ersten sichtbaren Tag der Abwesenheit -->
+                  <mat-icon
+                    *ngIf="!row.cells[i - 1] || row.cells[i - 1]?.id !== cell.id"
+                    class="bar-icon">
+                    {{ getAbsenceIcon(cell.absence_type) }}
+                  </mat-icon>
+                </div>
+
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<!-- Info-Box Overlay -->
+<div class="info-box-backdrop" *ngIf="showInfoBox" (click)="showInfoBox = false"></div>
+<mat-card class="info-box" *ngIf="showInfoBox">
+  <mat-card-content>
+    <div class="info-header">
+      <div class="info-title">
+        <mat-icon color="primary">info</mat-icon>
+        <h3>Informationen zu Abwesenheiten</h3>
+      </div>
+      <button mat-icon-button (click)="closeInfoBox()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="info-content">
+      <div class="info-section">
+        <h4><mat-icon>calendar_month</mat-icon> Kalenderansicht</h4>
+        <p>Mitarbeiter werden zeilenweise dargestellt, Tage als Spalten. Farbige Balken zeigen Abwesenheitszeiträume an.</p>
+      </div>
+      <div class="info-section">
+        <h4><mat-icon>navigate_next</mat-icon> Navigation</h4>
+        <p>Mit den Pfeiltasten wochenweise vor- und zurücknavigieren. "Heute" springt zur aktuellen Woche zurück.</p>
+      </div>
+      <div class="info-section">
+        <h4><mat-icon>edit</mat-icon> Bearbeiten</h4>
+        <p>Klick auf einen farbigen Balken öffnet den Bearbeitungsdialog. Genehmigte Urlaube können nur über die Urlaubsverwaltung bearbeitet werden.</p>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
