@@ -43,6 +43,7 @@
 
   <mat-card *ngIf="!loading">
     <mat-card-content>
+      <div class="table-scroll">
       <table mat-table [dataSource]="employees" class="employees-table">
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef>Name</th>
@@ -111,6 +112,7 @@
           </td>
         </tr>
       </table>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

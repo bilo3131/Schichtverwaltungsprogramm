@@ -399,6 +399,36 @@
   }
 }
 
+// ===== MOBILE RESPONSIVE (≤767px / 350px target) =====
+@media (max-width: 767px) {
+  .user-name {
+    display: none;
+  }
+
+  .department-filter {
+    display: none;
+  }
+
+  .content-wrapper {
+    padding: 0.75rem;
+  }
+
+  .app-logo {
+    height: 28px;
+    margin-left: 0.5rem;
+  }
+
+  ::ng-deep .notification-menu {
+    &.mat-mdc-menu-panel {
+      max-width: calc(100vw - 16px) !important;
+    }
+
+    .mat-mdc-menu-content {
+      width: min(350px, calc(100vw - 16px));
+    }
+  }
+}
+
 .copyright {
   padding: 1rem;
   text-align: center;

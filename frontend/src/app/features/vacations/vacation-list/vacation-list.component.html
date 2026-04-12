@@ -28,6 +28,7 @@
             <p>Keine Urlaubsanträge vorhanden</p>
           </div>
 
+          <div class="table-scroll">
           <table mat-table [dataSource]="filteredVacationRequests" *ngIf="!loadingVacations && filteredVacationRequests.length > 0" class="vacation-table">
                 <ng-container matColumnDef="employee">
                   <th mat-header-cell *matHeaderCellDef>Mitarbeiter</th>
@@ -99,6 +100,7 @@
                 <tr mat-row *matRowDef="let row; columns: vacationColumns;" 
                     [class.separator-row]="isFirstNonPendingRequest(row)"></tr>
               </table>
+          </div>
         </mat-card-content>
       </mat-card>
 

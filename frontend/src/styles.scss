@@ -78,6 +78,13 @@ $dark-theme: mat.define-theme((
   box-sizing: border-box;
 }
 
+// Mobile table scroll utility
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
 html, body {
   height: 100%;
 }

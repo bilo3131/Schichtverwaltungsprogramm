@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { Subscription } from 'rxjs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -54,8 +56,9 @@ interface MenuItem {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
+  isMobile = false;
   sidenavOpened = true;
   isDarkMode = false;
   departments: Department[] = [];
@@ -65,6 +68,7 @@ export class DashboardComponent implements OnInit {
   showDemoBanner = false;
   currentYear = new Date().getFullYear();
   private lastUserId: number | null = null; // Tracke die aktuelle User-ID
+  private breakpointSub?: Subscription;
   
   get selectedDepartmentId(): number | 'all' {
     return this.dashboardFilterService.selectedDepartmentId$.value;
@@ -163,10 +167,18 @@ export class DashboardComponent implements OnInit {
     private subscriptionService: SubscriptionService,
     private inactivityService: InactivityService,
     private tutorialService: TutorialService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private breakpointObserver: BreakpointObserver
   ) {}
 
   ngOnInit(): void {
+    this.breakpointSub = this.breakpointObserver
+      .observe(['(max-width: 767px)'])
+      .subscribe(result => {
+        this.isMobile = result.matches;
+        this.sidenavOpened = !result.matches;
+      });
+
     this.pwaService.checkForInstallPrompt();
     
     // Starte Inaktivitäts-Überwachung
@@ -385,5 +397,15 @@ export class DashboardComponent implements OnInit {
 
   toggleDarkMode(): void {
     this.themeService.toggleDarkMode();
+  }
+
+  closeSidenavOnMobile(): void {
+    if (this.isMobile) {
+      this.sidenavOpened = false;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.breakpointSub?.unsubscribe();
   }
 }
