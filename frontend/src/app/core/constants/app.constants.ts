@@ -13,13 +13,13 @@ export const UserRoles = {
   TEAM_LEADER: 'team_leader',
   GROUP_LEADER: 'group_leader',
   EMPLOYEE: 'employee',
-  
+
   // Role groups for permission checks
   ADMIN_ROLES: ['admin', 'hr'] as readonly string[],
   MANAGER_ROLES: ['admin', 'hr', 'department_manager'] as readonly string[],
   SUPERVISOR_ROLES: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader'] as readonly string[],
   NON_EMPLOYEE_ROLES: ['admin', 'hr', 'department_manager', 'team_leader', 'group_leader'] as readonly string[],
-  
+
   // Display names
   DISPLAY_NAMES: {
     admin: 'Administrator',
@@ -38,7 +38,7 @@ export const VacationRequestStatus = {
   PENDING: 'pending',
   APPROVED: 'approved',
   REJECTED: 'rejected',
-  
+
   DISPLAY_NAMES: {
     pending: 'Ausstehend',
     approved: 'Genehmigt',
@@ -52,7 +52,7 @@ export const VacationRequestStatus = {
 export const ShiftStatus = {
   DRAFT: 'draft',
   PUBLISHED: 'published',
-  
+
   DISPLAY_NAMES: {
     draft: 'Entwurf',
     published: 'Veröffentlicht',
@@ -66,7 +66,7 @@ export const ShiftSwapRequestStatus = {
   PENDING: 'pending',
   APPROVED: 'approved',
   REJECTED: 'rejected',
-  
+
   DISPLAY_NAMES: {
     pending: 'Ausstehend',
     approved: 'Genehmigt',
@@ -139,7 +139,7 @@ export const EmploymentTypes = {
   MINIJOB: 'minijob',
   WERKSTUDENT: 'werkstudent',
   APPRENTICE: 'apprentice',
-  
+
   DISPLAY_NAMES: {
     fulltime: 'Vollzeit',
     parttime: 'Teilzeit',
@@ -156,19 +156,19 @@ export class RoleHelper {
   static isAdminOrHr(role: string): boolean {
     return UserRoles.ADMIN_ROLES.includes(role);
   }
-  
+
   static isManagerOrAbove(role: string): boolean {
     return UserRoles.MANAGER_ROLES.includes(role);
   }
-  
+
   static isSupervisorOrAbove(role: string): boolean {
     return UserRoles.SUPERVISOR_ROLES.includes(role);
   }
-  
+
   static isNonEmployee(role: string): boolean {
     return UserRoles.NON_EMPLOYEE_ROLES.includes(role);
   }
-  
+
   static getRoleDisplayName(role: string): string {
     return UserRoles.DISPLAY_NAMES[role as keyof typeof UserRoles.DISPLAY_NAMES] || role;
   }
@@ -177,14 +177,14 @@ export class RoleHelper {
 /**
  * Type definitions for type safety
  */
-export type UserRole = typeof UserRoles.ADMIN | typeof UserRoles.HR | typeof UserRoles.DEPARTMENT_MANAGER | 
-                       typeof UserRoles.TEAM_LEADER | typeof UserRoles.GROUP_LEADER | typeof UserRoles.EMPLOYEE;
+export type UserRole = typeof UserRoles.ADMIN | typeof UserRoles.HR | typeof UserRoles.DEPARTMENT_MANAGER |
+  typeof UserRoles.TEAM_LEADER | typeof UserRoles.GROUP_LEADER | typeof UserRoles.EMPLOYEE;
 
-export type VacationStatus = typeof VacationRequestStatus.PENDING | typeof VacationRequestStatus.APPROVED | 
-                             typeof VacationRequestStatus.REJECTED;
+export type VacationStatus = typeof VacationRequestStatus.PENDING | typeof VacationRequestStatus.APPROVED |
+  typeof VacationRequestStatus.REJECTED;
 
 export type ShiftStatusType = typeof ShiftStatus.DRAFT | typeof ShiftStatus.PUBLISHED;
 
-export type EmploymentType = typeof EmploymentTypes.FULLTIME | typeof EmploymentTypes.PARTTIME | 
-                             typeof EmploymentTypes.MINIJOB | typeof EmploymentTypes.WERKSTUDENT | 
-                             typeof EmploymentTypes.APPRENTICE;
+export type EmploymentType = typeof EmploymentTypes.FULLTIME | typeof EmploymentTypes.PARTTIME |
+  typeof EmploymentTypes.MINIJOB | typeof EmploymentTypes.WERKSTUDENT |
+  typeof EmploymentTypes.APPRENTICE;

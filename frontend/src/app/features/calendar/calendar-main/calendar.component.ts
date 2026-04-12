@@ -20,7 +20,7 @@ import deLocale from '@fullcalendar/core/locales/de';
 import { EventService } from '../../../core/services/event.service';
 import { EmployeeService } from '../../../core/services/employee.service';
 import { DepartmentService } from '../../../core/services/department.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { HolidayService } from '../../../core/services/holiday.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -93,7 +93,7 @@ export class CalendarComponent implements OnInit {
     private eventService: EventService,
     private employeeService: EmployeeService,
     private departmentService: DepartmentService,
-    private notificationService: NotificationService,
+    private holidayService: HolidayService,
     private authService: AuthService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
@@ -172,7 +172,7 @@ export class CalendarComponent implements OnInit {
         const eventItems = this.convertEventsToCalendarEvents(filteredEvents);
         
         // Lade Feiertage
-        this.notificationService.getHolidays(startDate, endDate).subscribe({
+        this.holidayService.getHolidays(startDate, endDate).subscribe({
           next: (holidayData) => {
             this.holidays = holidayData.results || holidayData;
             const holidayEvents = this.convertHolidaysToEvents(this.holidays);

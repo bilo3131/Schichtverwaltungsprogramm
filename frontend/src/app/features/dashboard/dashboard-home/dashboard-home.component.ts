@@ -12,7 +12,7 @@ import { ShiftService } from '../../../core/services/shift.service';
 import { EmployeeService } from '../../../core/services/employee.service';
 import { EventService } from '../../../core/services/event.service';
 import { DashboardFilterService } from '../../../core/services/dashboard-filter.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { HolidayService } from '../../../core/services/holiday.service';
 import { AbsenceDialogComponent } from '../../../shared/dialogs/absence-dialog/absence-dialog.component';
 import { forkJoin } from 'rxjs';
 
@@ -141,7 +141,7 @@ export class DashboardHomeComponent implements OnInit {
     private dashboardFilterService: DashboardFilterService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private notificationService: NotificationService,
+    private holidayService: HolidayService,
     private eventService?: EventService
   ) {}
 
@@ -361,7 +361,7 @@ export class DashboardHomeComponent implements OnInit {
     const inTwoWeeks = new Date();
     inTwoWeeks.setDate(todayDate.getDate() + 14);
 
-    this.notificationService.getHolidays(
+    this.holidayService.getHolidays(
       todayDate.toISOString().split('T')[0],
       inTwoWeeks.toISOString().split('T')[0]
     ).subscribe({

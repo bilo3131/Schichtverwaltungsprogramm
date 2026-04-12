@@ -1,45 +1,50 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { SubscriptionService } from '../services/subscription.service';
+import { PLAN_FEATURES, SubscriptionPlan } from '../models/subscription.model';
+import { LoggerService } from '../services/logger.service';
 
 /**
- * Feature Guard Factory: Prüft ob ein bestimmtes Feature im aktuellen Subscription Plan verfügbar ist
- * @param requiredFeature Das erforderliche Feature
- * @returns CanActivateFn Guard Function
+ * Factory that creates a guard protecting routes behind a subscription feature flag.
+ * The feature key must exist in PLAN_FEATURES (see subscription.model.ts).
+ * Redirects to /dashboard when the current plan does not include the feature.
+ *
+ * NOTE: Currently unused — wire into routes when feature gating is needed.
  */
 export const featureGuardFactory = (requiredFeature: string): CanActivateFn => {
   return () => {
     const subscriptionService = inject(SubscriptionService);
-    const router = inject(Router);
+    const limits = subscriptionService.getCurrentLimits();
+    const tier = limits?.tier as SubscriptionPlan | undefined;
+    const plan = tier ? PLAN_FEATURES[tier as unknown as SubscriptionPlan] : null;
+    const hasFeature = plan ? !!plan[requiredFeature] : false;
 
-    if (subscriptionService.hasFeature(requiredFeature)) {
-      return true;
-    }
+    if (hasFeature) return true;
 
-    // Benutzer hat keinen Zugriff - leite zur Upgrade-Seite oder Dashboard
-    console.warn(`Feature "${requiredFeature}" ist im aktuellen Plan nicht verfügbar`);
-    router.navigate(['/dashboard']);
+    inject(LoggerService).warn(`Feature "${requiredFeature}" is not available in the current plan.`);
+    inject(Router).navigate(['/dashboard']);
     return false;
   };
 };
 
 /**
- * Plan Guard Factory: Prüft ob der aktuelle Plan mindestens dem erforderlichen Plan entspricht
- * @param requiredPlan Der minimal erforderliche Plan ('low', 'mid', 'high')
- * @returns CanActivateFn Guard Function
+ * Factory that creates a guard requiring a minimum subscription tier.
+ * Tier order: starter < pro < business.
+ * Redirects to /dashboard when the requirement is not met.
+ *
+ * NOTE: Currently unused — wire into routes when plan gating is needed.
  */
-export const planGuardFactory = (requiredPlan: string): CanActivateFn => {
+export const planGuardFactory = (minimumTier: 'starter' | 'pro' | 'business'): CanActivateFn => {
+  const TIER_ORDER: Record<string, number> = { starter: 0, pro: 1, business: 2 };
   return () => {
-    const subscriptionService = inject(SubscriptionService);
-    const router = inject(Router);
+    const limits = inject(SubscriptionService).getCurrentLimits();
+    const currentTier = limits?.tier ?? 'starter';
+    const meetsRequirement = (TIER_ORDER[currentTier] ?? 0) >= (TIER_ORDER[minimumTier] ?? 0);
 
-    if (subscriptionService.hasMinimumPlan(requiredPlan)) {
-      return true;
-    }
+    if (meetsRequirement) return true;
 
-    // Benutzer hat keinen Zugriff
-    console.warn(`Mindestens "${requiredPlan}" Plan erforderlich`);
-    router.navigate(['/dashboard']);
+    inject(LoggerService).warn(`Tier "${minimumTier}" or higher is required.`);
+    inject(Router).navigate(['/dashboard']);
     return false;
   };
 };

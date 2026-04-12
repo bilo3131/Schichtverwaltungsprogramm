@@ -5,26 +5,23 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class LoggerService {
+  /** Logs general information. Suppressed in production. */
   log(...args: any[]): void {
-    if (environment.enableLogging) {
-      console.log(...args);
-    }
+    if (environment.enableLogging) console.log(...args);
   }
 
+  /** Logs warnings. Suppressed in production. */
   warn(...args: any[]): void {
-    if (environment.enableLogging) {
-      console.warn(...args);
-    }
+    if (environment.enableLogging) console.warn(...args);
   }
 
+  /** Logs errors. Always active, even in production. */
   error(...args: any[]): void {
-    // Errors sollten immer geloggt werden
     console.error(...args);
   }
 
+  /** Logs informational messages. Suppressed in production. */
   info(...args: any[]): void {
-    if (environment.enableLogging) {
-      console.info(...args);
-    }
+    if (environment.enableLogging) console.info(...args);
   }
 }

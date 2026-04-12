@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Department } from '../models/employee.model';
 import { getApiUrl } from '../config/api.config';
+import { buildHttpParams } from '../utils/http-params.util';
 
 @Injectable({
   providedIn: 'root'
@@ -12,36 +13,28 @@ export class DepartmentService {
 
   constructor(private http: HttpClient) {}
 
-  getDepartments(params?: any): Observable<any> {
-    const httpParams = this.buildHttpParams(params);
-    return this.http.get<any>(`${this.API_URL}/`, { params: httpParams });
+  /** Fetches all departments, with optional filter params. */
+  getDepartments(params?: Record<string, any>): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/`, { params: buildHttpParams(params) });
   }
 
+  /** Fetches a single department by ID. */
   getDepartment(id: number): Observable<Department> {
     return this.http.get<Department>(`${this.API_URL}/${id}/`);
   }
 
+  /** Creates a new department. */
   createDepartment(data: Partial<Department>): Observable<Department> {
     return this.http.post<Department>(`${this.API_URL}/`, data);
   }
 
+  /** Fully replaces an existing department. */
   updateDepartment(id: number, data: Partial<Department>): Observable<Department> {
     return this.http.put<Department>(`${this.API_URL}/${id}/`, data);
   }
 
+  /** Deletes a department by ID. */
   deleteDepartment(id: number): Observable<void> {
     return this.http.delete<void>(`${this.API_URL}/${id}/`);
-  }
-
-  private buildHttpParams(params?: any): HttpParams {
-    let httpParams = new HttpParams();
-    if (params) {
-      Object.keys(params).forEach(key => {
-        if (params[key]) {
-          httpParams = httpParams.set(key, params[key]);
-        }
-      });
-    }
-    return httpParams;
   }
 }

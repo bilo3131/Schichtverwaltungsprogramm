@@ -24,6 +24,25 @@ import autoTable from 'jspdf-autotable';
 import { ShiftDialogComponent } from '../../../shared/dialogs/shift-dialog/shift-dialog.component';
 import { ConfirmDialogComponent } from '../../../shared/dialogs/confirm-dialog/confirm-dialog.component';
 import { UI_CONSTANTS } from '../../../core/constants/ui.constants';
+import {
+  formatDate as toIsoDate, formatDateDisplay as toDisplayDate,
+  formatTime as trimSeconds, getWeekRange, getWeekNumber,
+  getIsoWeekYear, getWeekDisplay as buildWeekDisplay,
+  generateWeekDays as buildWeekDays, calculateShiftDuration, WeekDay
+} from './shift-week.util';
+import {
+  isEmployeeAbsent as checkAbsence, hasApprovedVacation as checkVacation,
+  getAbsenceTypeName as absenceTypeName, getAbsenceTypeLabel as absenceTypeLabel,
+  shiftsViolateRestRule, hasShiftConflict,
+  getConflictingShiftIds, getAbsenceConflictShiftIds, buildAbsenceTooltip
+} from './shift-conflict.util';
+import {
+  getRequiredQualificationsText as buildRequiredQualsText,
+  hasMissingQualifications as checkMissingQuals,
+  getMissingQualificationsText as buildMissingQualsText,
+  getSuggestedEmployees as findSuggestedEmployees,
+  abbreviateEmployeeName
+} from './shift-qualification.util';
 
 @Component({
   selector: 'app-shift-list',
@@ -54,7 +73,7 @@ export class ShiftListComponent implements OnInit {
   absences: AbsenceRecord[] = [];
   vacationRequests: VacationRequest[] = [];
   loading = false;
-  weekDays: { name: string; date: string; dateStr: string }[] = [];
+  weekDays: WeekDay[] = [];
   
   currentWeekStart: Date = new Date();
   currentWeekEnd: Date = new Date();
@@ -92,37 +111,18 @@ export class ShiftListComponent implements OnInit {
     this.setCurrentWeek();
   }
 
+  /** Sets currentWeekStart/End to the Monday–Sunday range of today and refreshes the grid. */
   setCurrentWeek(): void {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday
-    
-    this.currentWeekStart = new Date(today);
-    this.currentWeekStart.setDate(today.getDate() + diff);
-    this.currentWeekStart.setHours(0, 0, 0, 0);
-    
-    this.currentWeekEnd = new Date(this.currentWeekStart);
-    this.currentWeekEnd.setDate(this.currentWeekStart.getDate() + 6);
-    this.currentWeekEnd.setHours(23, 59, 59, 999);
-    
+    const { start, end } = getWeekRange(new Date());
+    this.currentWeekStart = start;
+    this.currentWeekEnd   = end;
     this.updateFiltersFromWeek();
     this.generateWeekDays();
   }
 
+  /** Rebuilds the weekDays array from the current week start date. */
   generateWeekDays(): void {
-    const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-    this.weekDays = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(this.currentWeekStart);
-      date.setDate(this.currentWeekStart.getDate() + i);
-      
-      this.weekDays.push({
-        name: dayNames[i],
-        date: this.formatDateDisplay(date),
-        dateStr: this.formatDate(date)
-      });
-    }
+    this.weekDays = buildWeekDays(this.currentWeekStart);
   }
 
   isDayAvailableForShiftType(shiftType: ShiftType, dateStr: string): boolean {
@@ -188,66 +188,27 @@ export class ShiftListComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  /** Returns the blocking AbsenceRecord for the employee on dateStr, or null. */
   isEmployeeAbsent(employeeId: number, dateStr: string): AbsenceRecord | null {
-    const targetDate = new Date(dateStr);
-    
-    return this.absences.find(absence => {
-      if (absence.employee !== employeeId) {
-        return false;
-      }
-      
-      // Urlaubswunsch ist keine blockierende Abwesenheit
-      if (absence.absence_type === 'vacation_wish') {
-        return false;
-      }
-      
-      const startDate = new Date(absence.start_date);
-      const endDate = new Date(absence.end_date);
-      
-      // Vergleiche nur die Daten, nicht die Zeiten
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      targetDate.setHours(0, 0, 0, 0);
-      
-      return targetDate >= startDate && targetDate <= endDate;
-    }) || null;
+    return checkAbsence(employeeId, dateStr, this.absences);
   }
 
-  getAbsenceTypeName(type: string): string {
-    switch (type) {
-      case 'sick': return 'Krankheit';
-      case 'vacation': return 'Urlaub';
-      case 'vacation_wish': return 'Urlaubswunsch';
-      case 'kug': return 'Kurzarbeit';
-      case 'other': return 'Sonstiges';
-      default: return type;
-    }
-  }
+  /** Maps an absence type key to its full German name (used in dialogs). */
+  getAbsenceTypeName(type: string): string { return absenceTypeName(type); }
 
+  /** Opens the shift dialog pre-filled for a specific employee and date. */
   openQuickAddDialog(employeeId: number, dateStr: string): void {
-    // Quick add for single shift - reuse existing dialog but pre-fill employee and date
-    const date = new Date(dateStr);
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    const currentWeekNum = { year: d.getUTCFullYear(), week: weekNo };
-    
     const dialogRef = this.dialog.open(ShiftDialogComponent, {
       width: '600px',
       data: {
         shiftTypes: this.shiftTypes,
         employees: this.employees,
-        currentWeek: currentWeekNum,
+        currentWeek: getIsoWeekYear(new Date(dateStr)),
         existingShifts: this.shifts
       }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result && Array.isArray(result)) {
-        this.createMultipleShifts(result);
-      }
+      if (result && Array.isArray(result)) this.createMultipleShifts(result);
     });
   }
 
@@ -421,24 +382,15 @@ export class ShiftListComponent implements OnInit {
     }
   }
 
+  /** Opens the shift dialog pre-filled for a specific shift type and date. */
   openQuickAddDialogForShiftType(shiftTypeId: number, dateStr: string): void {
-    const date = new Date(dateStr);
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    const currentWeekNum = { year: d.getUTCFullYear(), week: weekNo };
-    
-    // Find the selected shift type to get its times
     const selectedShiftType = this.shiftTypes.find(st => st.id === shiftTypeId);
-    
     const dialogRef = this.dialog.open(ShiftDialogComponent, {
       width: '600px',
       data: {
         shiftTypes: this.shiftTypes,
         employees: this.employees,
-        currentWeek: currentWeekNum,
+        currentWeek: getIsoWeekYear(new Date(dateStr)),
         existingShifts: this.shifts,
         prefilledData: {
           shift_type: shiftTypeId,
@@ -448,39 +400,26 @@ export class ShiftListComponent implements OnInit {
         }
       }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result && Array.isArray(result)) {
-        this.createMultipleShifts(result);
-      } else if (result) {
-        this.createShift(result);
-      }
+      if (result && Array.isArray(result)) { this.createMultipleShifts(result); }
+      else if (result) { this.createShift(result); }
     });
   }
 
+  /** Syncs the date-range filter strings from the current week boundaries. */
   updateFiltersFromWeek(): void {
-    this.filters.startDate = this.formatDate(this.currentWeekStart);
-    this.filters.endDate = this.formatDate(this.currentWeekEnd);
+    this.filters.startDate = toIsoDate(this.currentWeekStart);
+    this.filters.endDate   = toIsoDate(this.currentWeekEnd);
   }
 
-  formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+  /** Returns YYYY-MM-DD for the given date. */
+  formatDate(date: Date): string { return toIsoDate(date); }
 
-  formatDateDisplay(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  }
+  /** Returns DD.MM.YYYY for the given date. */
+  formatDateDisplay(date: Date): string { return toDisplayDate(date); }
 
-  formatTime(time: string): string {
-    // Remove seconds from time string (HH:MM:SS -> HH:MM)
-    return time.substring(0, 5);
-  }
+  /** Trims a time string from HH:MM:SS to HH:MM. */
+  formatTime(time: string): string { return trimSeconds(time); }
 
   hasEmployeeConflict(employeeId: number | undefined): boolean {
     if (!employeeId || !this.currentHoveredCell) return false;
@@ -522,102 +461,17 @@ export class ShiftListComponent implements OnInit {
     }
   }
 
+  /**
+   * Checks whether the employee conflicts with the target shift type + date during drag,
+   * then stores the result in employeeConflicts for the current hover cycle.
+   */
   checkEmployeeConflict(employeeId: number, shiftTypeId: number, dateStr: string, excludeShiftId?: number): void {
-    const key = `${employeeId}_${shiftTypeId}_${dateStr}`;
-    
-    // Check if employee already has a shift on this date (excluding the dragged shift)
-    const existingShift = this.shifts.find(s => 
-      s.employee === employeeId && s.date === dateStr && s.id !== excludeShiftId
-    );
-    
-    if (existingShift) {
-      this.employeeConflicts.set(key, true);
-      return;
-    }
-    
-    // Find the shift type to get start/end times
     const shiftType = this.shiftTypes.find(st => st.id === shiftTypeId);
-    if (!shiftType) {
-      this.employeeConflicts.set(key, false);
-      return;
-    }
-    
-    // Get all shifts for this employee sorted by date (excluding the dragged shift)
-    const employeeShifts = this.shifts
-      .filter(s => s.employee === employeeId && s.id !== excludeShiftId)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const newDate = new Date(dateStr);
-    const newStart = this.parseTime(shiftType.start_time);
-    const newEnd = this.parseTime(shiftType.end_time);
-    
-    // Check for conflicts with each existing shift
-    for (const existingShift of employeeShifts) {
-      const existingDate = new Date(existingShift.date);
-      const daysDiff = Math.abs((newDate.getTime() - existingDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Only check shifts within 2 days
-      if (daysDiff > 2) continue;
-      
-      const existingStart = this.parseTime(existingShift.start_time);
-      const existingEnd = this.parseTime(existingShift.end_time);
-      
-      // Calculate start time of existing shift
-      const existingStartTime = new Date(existingDate);
-      existingStartTime.setHours(existingStart.hours, existingStart.minutes, 0, 0);
-      
-      // Calculate end time of existing shift
-      const existingEndTime = new Date(existingDate);
-      existingEndTime.setHours(existingEnd.hours, existingEnd.minutes, 0, 0);
-      
-      // If end time is before start time, shift ends next day
-      if (existingEnd.hours < existingStart.hours || 
-          (existingEnd.hours === existingStart.hours && existingEnd.minutes < existingStart.minutes)) {
-        existingEndTime.setDate(existingEndTime.getDate() + 1);
-      }
-      
-      // Calculate start time of new shift
-      const newStartTime = new Date(newDate);
-      newStartTime.setHours(newStart.hours, newStart.minutes, 0, 0);
-      
-      // Calculate end time of new shift
-      const newEndTime = new Date(newDate);
-      newEndTime.setHours(newEnd.hours, newEnd.minutes, 0, 0);
-      
-      // If end time is before start time, shift ends next day
-      if (newEnd.hours < newStart.hours || 
-          (newEnd.hours === newStart.hours && newEnd.minutes < newStart.minutes)) {
-        newEndTime.setDate(newEndTime.getDate() + 1);
-      }
-      
-      // Check for overlap: shifts overlap if one starts before the other ends
-      const shiftsOverlap = (existingStartTime < newEndTime && newStartTime < existingEndTime);
-      
-      if (shiftsOverlap) {
-        this.employeeConflicts.set(key, true);
-        return;
-      }
-      
-      // Calculate rest hours between shifts
-      let restHours = 0;
-      
-      if (newDate > existingDate || (newDate.getTime() === existingDate.getTime() && newStartTime > existingEndTime)) {
-        // New shift is after existing shift
-        restHours = (newStartTime.getTime() - existingEndTime.getTime()) / (1000 * 60 * 60);
-      } else {
-        // New shift is before existing shift
-        restHours = (existingStartTime.getTime() - newEndTime.getTime()) / (1000 * 60 * 60);
-      }
-      
-      // If less than 11 hours rest, it's a conflict
-      if (restHours < 11 && restHours >= 0) {
-        this.employeeConflicts.set(key, true);
-        return;
-      }
-    }
-    
-    // No conflicts found
-    this.employeeConflicts.set(key, false);
+    const key = `${employeeId}_${shiftTypeId}_${dateStr}`;
+    const conflict = shiftType
+      ? hasShiftConflict(employeeId, dateStr, shiftType, this.shifts, excludeShiftId)
+      : false;
+    this.employeeConflicts.set(key, conflict);
   }
 
   onCellLeave(): void {
@@ -836,66 +690,14 @@ export class ShiftListComponent implements OnInit {
     return userProfileId === empId;
   }
 
+  /** Returns a short, unique display name for the shift grid cell (e.g. "Ma.Schmidt"). */
   formatEmployeeName(employee: Employee): string {
-    if (!employee.full_name) return '';
-    
-    const parts = employee.full_name.trim().split(' ');
-    if (parts.length < 2) return employee.full_name;
-    
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
-    const lastNameFormatted = lastName.length > 7 ? lastName.substring(0, 7) : lastName;
-    
-    // Finde alle Mitarbeiter mit demselben Nachnamen
-    const sameLastName = this.employees.filter(emp => {
-      if (emp.id === employee.id) return false;
-      const empParts = (emp.full_name || '').trim().split(' ');
-      if (empParts.length < 2) return false;
-      const empLastName = empParts[empParts.length - 1];
-      return empLastName === lastName;
-    });
-    
-    // Wenn niemand denselben Nachnamen hat, nur ersten Buchstaben verwenden
-    if (sameLastName.length === 0) {
-      return `${firstName.substring(0, 1)}.${lastNameFormatted}`;
-    }
-    
-    // Schrittweise mehr Buchstaben hinzufügen, bis der Name eindeutig ist
-    let numLetters = 1;
-    while (numLetters <= firstName.length) {
-      const abbr = firstName.substring(0, numLetters);
-      
-      // Prüfen, ob dieser Abbr mit anderen Mitarbeitern kollidiert
-      const hasConflict = sameLastName.some(emp => {
-        const empParts = (emp.full_name || '').trim().split(' ');
-        const empFirstName = empParts[0];
-        return empFirstName.substring(0, numLetters) === abbr;
-      });
-      
-      if (!hasConflict) {
-        return `${abbr}.${lastNameFormatted}`;
-      }
-      
-      numLetters++;
-    }
-    
-    // Fallback: ganzen Vornamen verwenden
-    return `${firstName}.${lastNameFormatted}`;
+    return abbreviateEmployeeName(employee, this.employees);
   }
 
-  getWeekNumber(date: Date): number {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  }
-
+  /** Returns the formatted week label shown in the header (e.g. "KW05 (03.02.2025 - 09.02.2025)"). */
   getWeekDisplay(): string {
-    const weekNum = this.getWeekNumber(this.currentWeekStart);
-    const startStr = this.formatDateDisplay(this.currentWeekStart);
-    const endStr = this.formatDateDisplay(this.currentWeekEnd);
-    return `KW${String(weekNum).padStart(2, '0')} (${startStr} - ${endStr})`;
+    return buildWeekDisplay(this.currentWeekStart, this.currentWeekEnd);
   }
 
   previousWeek(): void {
@@ -1088,15 +890,8 @@ export class ShiftListComponent implements OnInit {
     }
   }
 
+  /** Opens the shift dialog for creating or editing a shift. */
   openShiftDialog(shift?: Shift): void {
-    // Calculate current week number from currentWeekStart
-    const d = new Date(Date.UTC(this.currentWeekStart.getFullYear(), this.currentWeekStart.getMonth(), this.currentWeekStart.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    const currentWeekNum = { year: d.getUTCFullYear(), week: weekNo };
-    
     const dialogRef = this.dialog.open(ShiftDialogComponent, {
       width: '600px',
       data: {
@@ -1104,21 +899,14 @@ export class ShiftListComponent implements OnInit {
         shiftTypes: this.shiftTypes,
         employees: this.employees,
         existingShifts: this.shifts,
-        currentWeek: currentWeekNum
+        currentWeek: getIsoWeekYear(this.currentWeekStart)
       }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        if (Array.isArray(result)) {
-          // Multiple shifts created
-          this.createMultipleShifts(result);
-        } else if (shift) {
-          this.updateShift(shift.id, result);
-        } else {
-          this.createShift(result);
-        }
-      }
+      if (!result) return;
+      if (Array.isArray(result))  { this.createMultipleShifts(result); }
+      else if (shift)             { this.updateShift(shift.id, result); }
+      else                        { this.createShift(result); }
     });
   }
 
@@ -1251,216 +1039,42 @@ export class ShiftListComponent implements OnInit {
     });
   }
 
+  /**
+   * Immediately flags rest-period conflicts involving a newly created shift,
+   * before the full loadShifts() reload completes.
+   */
   checkForConflictsAfterCreation(newShift: any): void {
     if (!newShift.employee || !newShift.date) return;
-
-    // Check all other shifts of this employee for rest period violations
-    const employeeShifts = this.shifts.filter(s => 
-      s.employee === newShift.employee && s.id !== newShift.id
-    );
-
-    employeeShifts.forEach(existingShift => {
-      const newShiftDate = new Date(newShift.date);
-      const existingShiftDate = new Date(existingShift.date);
-      const timeDiff = Math.abs(newShiftDate.getTime() - existingShiftDate.getTime());
-      const hoursDiff = timeDiff / (1000 * 60 * 60);
-
-      // If shifts are within 24 hours, check for 11-hour rest period violation
-      if (hoursDiff < 24) {
-        // Parse times
-        const newStart = this.parseTime(newShift.start_time);
-        const newEnd = this.parseTime(newShift.end_time);
-        const existingStart = this.parseTime(existingShift.start_time);
-        const existingEnd = this.parseTime(existingShift.end_time);
-
-        let restHours = 0;
-        
-        if (newShiftDate > existingShiftDate) {
-          // New shift is after existing shift
-          const existingEndTime = new Date(existingShiftDate);
-          existingEndTime.setHours(existingEnd.hours, existingEnd.minutes);
-          
-          const newStartTime = new Date(newShiftDate);
-          newStartTime.setHours(newStart.hours, newStart.minutes);
-          
-          restHours = (newStartTime.getTime() - existingEndTime.getTime()) / (1000 * 60 * 60);
-        } else {
-          // New shift is before existing shift
-          const newEndTime = new Date(newShiftDate);
-          newEndTime.setHours(newEnd.hours, newEnd.minutes);
-          
-          const existingStartTime = new Date(existingShiftDate);
-          existingStartTime.setHours(existingStart.hours, existingStart.minutes);
-          
-          restHours = (existingStartTime.getTime() - newEndTime.getTime()) / (1000 * 60 * 60);
-        }
-
-        // If rest period is less than 11 hours, mark as conflict
-        if (restHours < 11 && restHours >= 0) {
-          if (existingShift.id) {
-            this.permanentConflicts.add(existingShift.id);
-          }
-          if (newShift.id) {
-            this.permanentConflicts.add(newShift.id);
-          }
-        }
-      }
-    });
-  }
-
-  parseTime(timeStr: string): { hours: number; minutes: number } {
-    const parts = timeStr.split(':');
-    return {
-      hours: parseInt(parts[0], 10),
-      minutes: parseInt(parts[1], 10)
-    };
-  }
-
-  calculateAbsenceConflicts(): void {
-    this.absenceConflicts.clear();
-    
-    // Prüfe jede Schicht auf Überschneidung mit Abwesenheiten
-    this.shifts.forEach(shift => {
-      if (!shift.employee || !shift.id) return;
-      
-      // Prüfe auf Abwesenheiten
-      const absence = this.isEmployeeAbsent(shift.employee, shift.date);
-      if (absence) {
-        this.absenceConflicts.add(shift.id);
-        return;
-      }
-      
-      // Prüfe auf genehmigte Urlaubsanträge
-      const approvedVacation = this.hasApprovedVacation(shift.employee, shift.date);
-      if (approvedVacation) {
-        this.absenceConflicts.add(shift.id);
-      }
-    });
-  }
-
-  hasApprovedVacation(employeeId: number, dateStr: string): VacationRequest | null {
-    const targetDate = new Date(dateStr);
-    targetDate.setHours(0, 0, 0, 0);
-    
-    return this.vacationRequests.find(vacation => {
-      if (vacation.employee !== employeeId || vacation.status !== 'approved') {
-        return false;
-      }
-      
-      const startDate = new Date(vacation.start_date);
-      const endDate = new Date(vacation.end_date);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      
-      return targetDate >= startDate && targetDate <= endDate;
-    }) || null;
-  }
-
-  calculatePermanentConflicts(): void {
-    this.permanentConflicts.clear();
-    this.calculateAbsenceConflicts();
-    
-    // Group shifts by employee
-    const shiftsByEmployee = new Map<number, Shift[]>();
-    this.shifts.forEach(shift => {
-      if (!shift.employee) return;
-      
-      if (!shiftsByEmployee.has(shift.employee)) {
-        shiftsByEmployee.set(shift.employee, []);
-      }
-      shiftsByEmployee.get(shift.employee)!.push(shift);
-    });
-    
-    // Check each employee's shifts for conflicts
-    shiftsByEmployee.forEach((employeeShifts, employeeId) => {
-      // Check for multiple shifts on the same day
-      const shiftsByDate = new Map<string, Shift[]>();
-      employeeShifts.forEach(shift => {
-        if (!shiftsByDate.has(shift.date)) {
-          shiftsByDate.set(shift.date, []);
-        }
-        shiftsByDate.get(shift.date)!.push(shift);
-      });
-      
-      // Mark all shifts as conflicts if there are multiple shifts on the same day
-      shiftsByDate.forEach((shiftsOnDate, date) => {
-        if (shiftsOnDate.length > 1) {
-          shiftsOnDate.forEach(shift => {
-            if (shift.id) this.permanentConflicts.add(shift.id);
-          });
-        }
-      });
-      
-      // Sort shifts by date
-      const sortedShifts = employeeShifts.sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
+    const peers = this.shifts.filter(s => s.employee === newShift.employee && s.id !== newShift.id);
+    peers.forEach(existing => {
+      const hoursDiff = Math.abs(
+        (new Date(newShift.date).getTime() - new Date(existing.date).getTime()) / 3_600_000
       );
-      
-      // Check consecutive shifts for 11-hour rest period
-      for (let i = 0; i < sortedShifts.length - 1; i++) {
-        const currentShift = sortedShifts[i];
-        const nextShift = sortedShifts[i + 1];
-        
-        const currentDate = new Date(currentShift.date);
-        const nextDate = new Date(nextShift.date);
-        
-        // Skip if same date (already handled above)
-        if (currentShift.date === nextShift.date) continue;
-        
-        // Only check if shifts are within 2 days (to catch overnight violations)
-        const daysDiff = (nextDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24);
-        if (daysDiff > 2) continue;
-        
-        // Parse times
-        const currentStart = this.parseTime(currentShift.start_time);
-        const currentEnd = this.parseTime(currentShift.end_time);
-        const nextStart = this.parseTime(nextShift.start_time);
-        const nextEnd = this.parseTime(nextShift.end_time);
-        
-        // Calculate actual start and end times with dates
-        const currentStartTime = new Date(currentDate);
-        currentStartTime.setHours(currentStart.hours, currentStart.minutes, 0, 0);
-        
-        const currentEndTime = new Date(currentDate);
-        currentEndTime.setHours(currentEnd.hours, currentEnd.minutes, 0, 0);
-        
-        // If end time is before start time, shift ends next day (night shift)
-        if (currentEnd.hours < currentStart.hours || 
-            (currentEnd.hours === currentStart.hours && currentEnd.minutes < currentStart.minutes)) {
-          currentEndTime.setDate(currentEndTime.getDate() + 1);
-        }
-        
-        const nextStartTime = new Date(nextDate);
-        nextStartTime.setHours(nextStart.hours, nextStart.minutes, 0, 0);
-        
-        const nextEndTime = new Date(nextDate);
-        nextEndTime.setHours(nextEnd.hours, nextEnd.minutes, 0, 0);
-        
-        // If end time is before start time, shift ends next day (night shift)
-        if (nextEnd.hours < nextStart.hours || 
-            (nextEnd.hours === nextStart.hours && nextEnd.minutes < nextStart.minutes)) {
-          nextEndTime.setDate(nextEndTime.getDate() + 1);
-        }
-        
-        // Check for overlap: shifts overlap if one starts before the other ends
-        const shiftsOverlap = (currentStartTime < nextEndTime && nextStartTime < currentEndTime);
-        
-        if (shiftsOverlap) {
-          if (currentShift.id) this.permanentConflicts.add(currentShift.id);
-          if (nextShift.id) this.permanentConflicts.add(nextShift.id);
-          continue; // No need to check rest period if they overlap
-        }
-        
-        // Calculate rest hours between shifts
-        const restHours = (nextStartTime.getTime() - currentEndTime.getTime()) / (1000 * 60 * 60);
-        
-        // If less than 11 hours rest, mark both shifts as conflict
-        if (restHours < 11 && restHours >= 0) {
-          if (currentShift.id) this.permanentConflicts.add(currentShift.id);
-          if (nextShift.id) this.permanentConflicts.add(nextShift.id);
-        }
+      if (hoursDiff >= 24) return;
+      if (shiftsViolateRestRule(
+        new Date(existing.date), existing.start_time, existing.end_time,
+        new Date(newShift.date), newShift.start_time, newShift.end_time
+      )) {
+        if (existing.id) this.permanentConflicts.add(existing.id);
+        if (newShift.id)  this.permanentConflicts.add(newShift.id);
       }
     });
+  }
+
+  /** Returns the approved VacationRequest for the employee on dateStr, or null. */
+  hasApprovedVacation(employeeId: number, dateStr: string): VacationRequest | null {
+    return checkVacation(employeeId, dateStr, this.vacationRequests);
+  }
+
+  /** Recomputes absenceConflicts from the current shifts, absences, and vacation requests. */
+  calculateAbsenceConflicts(): void {
+    this.absenceConflicts = getAbsenceConflictShiftIds(this.shifts, this.absences, this.vacationRequests);
+  }
+
+  /** Recomputes all permanent conflicts (absence + rest-period violations) for the current week. */
+  calculatePermanentConflicts(): void {
+    this.calculateAbsenceConflicts();
+    this.permanentConflicts = getConflictingShiftIds(this.shifts);
   }
 
   updateShift(id: number, shiftData: any): void {
@@ -1608,142 +1222,33 @@ export class ShiftListComponent implements OnInit {
     });
   }
 
+  /** Returns comma-separated required qualification names for the shift type. */
   getRequiredQualificationsText(shiftType: ShiftType): string {
-    if (!shiftType.qualification_details || shiftType.qualification_details.length === 0) {
-      return 'Keine';
-    }
-    return shiftType.qualification_details.map((q: any) => q.name).join(', ');
+    return buildRequiredQualsText(shiftType);
   }
 
+  /** Returns true if any required qualification is not covered by the assigned employees. */
   hasMissingQualifications(shiftTypeId: number, dateStr: string): boolean {
     const shiftType = this.shiftTypes.find(st => st.id === shiftTypeId);
-    if (!shiftType || !shiftType.qualification_details || shiftType.qualification_details.length === 0) {
-      return false;
-    }
-
-    const shifts = this.getShiftsForTypeAndDay(shiftTypeId, dateStr);
-    if (shifts.length === 0) {
-      return false;
-    }
-
-    // Sammle alle Qualifikationen der zugeteilten Mitarbeiter
-    const allEmployeeQualifications = new Set<number>();
-    shifts.forEach(shift => {
-      if (shift.employee_details?.qualification_details) {
-        shift.employee_details.qualification_details.forEach((qual: any) => {
-          allEmployeeQualifications.add(qual.id);
-        });
-      }
-    });
-
-    // Prüfe ob alle erforderlichen Qualifikationen abgedeckt sind
-    const requiredQualifications = shiftType.qualification_details.map((q: any) => q.id);
-    return requiredQualifications.some(reqId => !allEmployeeQualifications.has(reqId));
+    if (!shiftType) return false;
+    return checkMissingQuals(shiftType, this.getShiftsForTypeAndDay(shiftTypeId, dateStr));
   }
 
+  /** Returns comma-separated names of missing qualifications for a shift cell. */
   getMissingQualificationsText(shiftTypeId: number, dateStr: string): string {
     const shiftType = this.shiftTypes.find(st => st.id === shiftTypeId);
-    if (!shiftType || !shiftType.qualification_details) {
-      return '';
-    }
-
-    const shifts = this.getShiftsForTypeAndDay(shiftTypeId, dateStr);
-    
-    // Sammle alle Qualifikationen der zugeteilten Mitarbeiter
-    const allEmployeeQualifications = new Set<number>();
-    shifts.forEach(shift => {
-      if (shift.employee_details?.qualification_details) {
-        shift.employee_details.qualification_details.forEach((qual: any) => {
-          allEmployeeQualifications.add(qual.id);
-        });
-      }
-    });
-
-    // Finde fehlende Qualifikationen
-    const missingQualifications = shiftType.qualification_details.filter(
-      (q: any) => !allEmployeeQualifications.has(q.id)
-    );
-
-    return missingQualifications.map((q: any) => q.name).join(', ');
+    if (!shiftType) return '';
+    return buildMissingQualsText(shiftType, this.getShiftsForTypeAndDay(shiftTypeId, dateStr));
   }
 
+  /** Returns employees who can fill missing qualifications for the given shift cell. */
   getSuggestedEmployees(shiftTypeId: number, dateStr: string): Employee[] {
     const shiftType = this.shiftTypes.find(st => st.id === shiftTypeId);
-    if (!shiftType || !shiftType.qualification_details) {
-      return [];
-    }
-
-    const shifts = this.getShiftsForTypeAndDay(shiftTypeId, dateStr);
-    
-    // Sammle alle Qualifikationen der zugeteilten Mitarbeiter
-    const allEmployeeQualifications = new Set<number>();
-    shifts.forEach(shift => {
-      if (shift.employee_details?.qualification_details) {
-        shift.employee_details.qualification_details.forEach((qual: any) => {
-          allEmployeeQualifications.add(qual.id);
-        });
-      }
-    });
-
-    // Finde fehlende Qualifikationen
-    const missingQualificationIds = shiftType.qualification_details
-      .filter((q: any) => !allEmployeeQualifications.has(q.id))
-      .map((q: any) => q.id);
-
-    if (missingQualificationIds.length === 0) {
-      return [];
-    }
-
-    // Sammle alle Mitarbeiter-IDs, die am selben Tag bereits in irgendeiner Schicht eingeplant sind
-    const allShiftsOnDay = this.shifts.filter(s => s.date === dateStr);
-    const employeesAlreadyScheduledOnDay = new Set(allShiftsOnDay.map(s => s.employee).filter(e => e));
-
-    // Finde Mitarbeiter die:
-    // 1. Zur gleichen Abteilung gehören (oder keine Abteilung hat der Schichttyp)
-    // 2. Mindestens eine der fehlenden Qualifikationen haben
-    // 3. Noch nicht in dieser Schicht eingeteilt sind
-    // 4. NICHT abwesend sind (kein Urlaub, Krankheit, KUG oder Sonstiges)
-    // 5. Am selben Tag noch nicht in einer anderen Schicht eingeplant sind
-    const assignedEmployeeIds = new Set(shifts.map(s => s.employee).filter(e => e));
-
-    return this.employees.filter(emp => {
-      // Nicht bereits zugewiesen
-      if (assignedEmployeeIds.has(emp.id)) {
-        return false;
-      }
-
-      // Nicht bereits an diesem Tag in einer anderen Schicht eingeplant
-      if (employeesAlreadyScheduledOnDay.has(emp.id)) {
-        return false;
-      }
-
-      // Nicht abwesend (Urlaub, Krankheit, KUG, Sonstiges)
-      if (this.isEmployeeAbsent(emp.id, dateStr)) {
-        return false;
-      }
-
-      // Abteilungsprüfung
-      if (shiftType.department && emp.department && shiftType.department !== emp.department) {
-        return false;
-      }
-
-      // Hat mindestens eine der fehlenden Qualifikationen
-      if (emp.qualification_details && emp.qualification_details.length > 0) {
-        const empQualIds = emp.qualification_details.map((q: any) => q.id);
-        return missingQualificationIds.some(reqId => empQualIds.includes(reqId));
-      }
-
-      return false;
-    }).sort((a, b) => {
-      // Sortiere nach Anzahl der passenden Qualifikationen (absteigend)
-      const aQuals = a.qualification_details?.filter((q: any) => 
-        missingQualificationIds.includes(q.id)
-      ).length || 0;
-      const bQuals = b.qualification_details?.filter((q: any) => 
-        missingQualificationIds.includes(q.id)
-      ).length || 0;
-      return bQuals - aQuals;
-    });
+    if (!shiftType) return [];
+    return findSuggestedEmployees(
+      shiftType, this.getShiftsForTypeAndDay(shiftTypeId, dateStr),
+      this.employees, this.shifts, this.absences, dateStr
+    );
   }
 
   getEmployeeQualificationsText(employee: Employee): string {
@@ -1831,7 +1336,7 @@ export class ShiftListComponent implements OnInit {
       });
       
       // Save PDF
-      const fileName = `Schichtplan_KW${this.getWeekNumber(this.currentWeekStart)}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `Schichtplan_KW${getWeekNumber(this.currentWeekStart)}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
       
       this.showSuccessMessage('PDF erfolgreich erstellt');
@@ -1890,97 +1395,22 @@ export class ShiftListComponent implements OnInit {
     });
   }
 
+  /** Returns a multi-line tooltip listing all absence days for the employee in the current week. */
   getEmployeeAbsenceTooltip(employee: Employee): string {
-    const absenceDays: { date: string, type: string, label: string }[] = [];
-    
-    this.weekDays.forEach(day => {
-      const absence = this.isEmployeeAbsent(employee.id, day.dateStr);
-      if (absence) {
-        const dateObj = new Date(day.dateStr);
-        const formattedDate = dateObj.toLocaleDateString('de-DE', { 
-          weekday: 'short', 
-          day: '2-digit', 
-          month: '2-digit' 
-        });
-        
-        const typeLabel = this.getAbsenceTypeLabel(absence.absence_type);
-        absenceDays.push({ date: formattedDate, type: absence.absence_type, label: typeLabel });
-      }
-    });
-    
-    if (absenceDays.length === 0) {
-      return '';
-    }
-    
-    // Gruppiere aufeinanderfolgende Tage mit gleichem Typ
-    const grouped: { type: string, label: string, dates: string[] }[] = [];
-    let current: { type: string, label: string, dates: string[] } | null = null;
-    
-    absenceDays.forEach(day => {
-      if (!current || current.type !== day.type) {
-        current = { type: day.type, label: day.label, dates: [day.date] };
-        grouped.push(current);
-      } else {
-        current.dates.push(day.date);
-      }
-    });
-    
-    // Formatiere die Ausgabe
-    const lines = grouped.map(group => {
-      if (group.dates.length === 1) {
-        return `${group.label}: ${group.dates[0]}`;
-      } else {
-        return `${group.label}: ${group.dates[0]} - ${group.dates[group.dates.length - 1]}`;
-      }
-    });
-    
-    return lines.join('\n');
+    return buildAbsenceTooltip(employee.id, this.weekDays, this.absences);
   }
 
-  getAbsenceTypeLabel(type: string): string {
-    switch (type) {
-      case 'sick': return 'Krank';
-      case 'vacation': return 'Urlaub';
-      case 'kug': return 'KUG';
-      case 'other': return 'Sonstiges';
-      default: return type;
-    }
-  }
+  /** Maps an absence type key to its short German label (used in tooltips). */
+  getAbsenceTypeLabel(type: string): string { return absenceTypeLabel(type); }
 
+  /** Returns total worked hours for the employee in the current week. */
   getEmployeeWeeklyHours(employeeId: number): number {
-    const employeeShifts = this.shifts.filter(shift => shift.employee === employeeId);
-    return employeeShifts.reduce((total, shift) => {
-      const shiftType = this.shiftTypes.find(st => st.id === shift.shift_type);
-      if (!shiftType) return total;
-      
-      // Berechne Dauer aus start_time und end_time mit automatischer Pausenberücksichtigung
-      const duration = this.calculateShiftDuration(shiftType.start_time, shiftType.end_time, shiftType.break_duration);
-      return total + duration;
-    }, 0);
-  }
-
-  calculateShiftDuration(startTime: string, endTime: string, breakDuration: number = 0): number {
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    
-    let hours = endHour - startHour;
-    let minutes = endMin - startMin;
-    
-    if (minutes < 0) {
-      hours--;
-      minutes += 60;
-    }
-    
-    // Über Mitternacht
-    if (hours < 0) {
-      hours += 24;
-    }
-    
-    const totalHours = hours + (minutes / 60);
-    
-    // Pausenabzug direkt aus ShiftType (wurde bereits im Backend/Frontend bei Schichttyp-Erstellung berechnet)
-    const breakHours = breakDuration / 60; // break_duration ist in Minuten
-    return Math.max(0, totalHours - breakHours);
+    return this.shifts
+      .filter(s => s.employee === employeeId)
+      .reduce((total, s) => {
+        const st = this.shiftTypes.find(t => t.id === s.shift_type);
+        return st ? total + calculateShiftDuration(st.start_time, st.end_time, st.break_duration) : total;
+      }, 0);
   }
 }
 

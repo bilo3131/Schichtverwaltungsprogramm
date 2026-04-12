@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 
+const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'] as const;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -12,10 +14,10 @@ export class InactivityService {
   private router = inject(Router);
   private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
-  
-  private readonly INACTIVITY_TIME = 15 * 60 * 1000; // 15 Minuten in Millisekunden
-  private readonly WARNING_TIME = 14 * 60 * 1000; // Warnung nach 14 Minuten
-  
+
+  private readonly INACTIVITY_MS = 15 * 60 * 1000; // 15 minutes
+  private readonly WARNING_MS = 14 * 60 * 1000;    // warn after 14 minutes
+
   private inactivityTimer: any;
   private warningTimer: any;
   private isBrowser: boolean;
@@ -23,166 +25,92 @@ export class InactivityService {
   private warningShown = false;
   private warningSnackBarRef: MatSnackBarRef<TextOnlySnackBar> | null = null;
 
+  // Stored bound reference so addEventListener and removeEventListener use the same function object.
+  private readonly boundActivityHandler = this.onUserActivity.bind(this);
+
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
 
-  /**
-   * Startet die Überwachung der User-Aktivität
-   */
+  /** Starts monitoring user activity. No-op if already monitoring or not in a browser. */
   startMonitoring(): void {
-    if (!this.isBrowser || this.isMonitoring) {
-      return;
-    }
-
+    if (!this.isBrowser || this.isMonitoring) return;
     this.isMonitoring = true;
     this.setupEventListeners();
     this.resetTimers();
   }
 
-  /**
-   * Stoppt die Überwachung
-   */
+  /** Stops monitoring and clears all timers. */
   stopMonitoring(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
+    if (!this.isBrowser) return;
     this.isMonitoring = false;
     this.clearTimers();
     this.removeEventListeners();
   }
 
-  /**
-   * Richtet Event-Listener für User-Aktivitäten ein
-   */
+  // ── Private ───────────────────────────────────────────────────────────────
+
+  /** Attaches DOM event listeners that count as user activity. */
   private setupEventListeners(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    // Events die als Aktivität zählen
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    events.forEach(event => {
-      document.addEventListener(event, this.onUserActivity.bind(this), true);
-    });
+    ACTIVITY_EVENTS.forEach(event =>
+      document.addEventListener(event, this.boundActivityHandler, true)
+    );
   }
 
-  /**
-   * Entfernt Event-Listener
-   */
+  /** Removes all previously attached activity listeners. */
   private removeEventListeners(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    events.forEach(event => {
-      document.removeEventListener(event, this.onUserActivity.bind(this), true);
-    });
+    ACTIVITY_EVENTS.forEach(event =>
+      document.removeEventListener(event, this.boundActivityHandler, true)
+    );
   }
 
-  /**
-   * Wird bei jeder User-Aktivität aufgerufen
-   */
+  /** Resets both timers on every user activity event. */
   private onUserActivity(): void {
-    if (!this.isMonitoring) {
-      return;
-    }
-
-    // Schließe die Warnung, wenn sie angezeigt wird
+    if (!this.isMonitoring) return;
     if (this.warningShown && this.warningSnackBarRef) {
       this.warningSnackBarRef.dismiss();
       this.warningSnackBarRef = null;
     }
-
     this.warningShown = false;
     this.resetTimers();
   }
 
-  /**
-   * Setzt die Timer zurück
-   */
+  /** Clears existing timers and starts fresh countdown timers. */
   private resetTimers(): void {
     this.clearTimers();
-
-    // Warning-Timer: Warnung 1 Minute vor Logout
-    this.warningTimer = setTimeout(() => {
-      this.showWarning();
-    }, this.WARNING_TIME);
-
-    // Inactivity-Timer: Automatischer Logout nach 15 Minuten
-    this.inactivityTimer = setTimeout(() => {
-      this.logout();
-    }, this.INACTIVITY_TIME);
+    this.warningTimer = setTimeout(() => this.showWarning(), this.WARNING_MS);
+    this.inactivityTimer = setTimeout(() => this.logout(), this.INACTIVITY_MS);
   }
 
-  /**
-   * Löscht alle laufenden Timer
-   */
+  /** Cancels both running timers. */
   private clearTimers(): void {
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
-      this.inactivityTimer = null;
-    }
-
-    if (this.warningTimer) {
-      clearTimeout(this.warningTimer);
-      this.warningTimer = null;
-    }
+    clearTimeout(this.inactivityTimer);
+    clearTimeout(this.warningTimer);
+    this.inactivityTimer = null;
+    this.warningTimer = null;
   }
 
-  /**
-   * Zeigt eine Warnung vor dem automatischen Logout
-   */
+  /** Shows a snackbar warning one minute before automatic logout. */
   private showWarning(): void {
-    if (this.warningShown) {
-      return;
-    }
-
+    if (this.warningShown) return;
     this.warningShown = true;
-    
     this.warningSnackBarRef = this.snackBar.open(
       'Sie werden in 1 Minute aufgrund von Inaktivität automatisch abgemeldet.',
       'Aktivität fortsetzen',
-      {
-        duration: 55000, // 55 Sekunden
-        horizontalPosition: 'center',
-        verticalPosition: 'top',
-        panelClass: ['warning-snackbar']
-      }
+      { duration: 55_000, horizontalPosition: 'center', verticalPosition: 'top', panelClass: ['warning-snackbar'] }
     );
-    
-    this.warningSnackBarRef.onAction().subscribe(() => {
-      // User hat auf Button geklickt - als Aktivität werten
-      this.onUserActivity();
-    });
+    this.warningSnackBarRef.onAction().subscribe(() => this.onUserActivity());
   }
 
-  /**
-   * Führt automatischen Logout durch
-   */
+  /** Performs automatic logout after the inactivity timeout expires. */
   private logout(): void {
-    if (!this.isMonitoring) {
-      return;
-    }
-
+    if (!this.isMonitoring) return;
     this.stopMonitoring();
-    
     this.snackBar.open(
       'Sie wurden aufgrund von Inaktivität automatisch abgemeldet.',
       'OK',
-      {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'top'
-      }
+      { duration: 5000, horizontalPosition: 'center', verticalPosition: 'top' }
     );
-
-    // Logout durchführen
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe();
   }
 }
